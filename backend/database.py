@@ -3,7 +3,19 @@ import os
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "falcon_yt.db")
+IS_VERCEL = bool(os.environ.get("VERCEL"))
+DB_DIR = "/tmp" if IS_VERCEL else os.path.dirname(__file__)
+DB_PATH = os.path.join(DB_DIR, "falcon_yt.db")
+
+# If on Vercel and bundled DB exists, copy it to /tmp
+if IS_VERCEL:
+    bundled_db = os.path.join(os.path.dirname(__file__), "falcon_yt.db")
+    if os.path.exists(bundled_db) and not os.path.exists(DB_PATH):
+        try:
+            import shutil
+            shutil.copy2(bundled_db, DB_PATH)
+        except Exception as _e:
+            print(f"Notice copying bundled DB: {_e}")
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
