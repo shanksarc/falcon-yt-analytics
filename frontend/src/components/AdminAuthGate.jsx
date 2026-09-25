@@ -311,32 +311,15 @@ export default function AdminAuthGate({ children }) {
           </button>
         </form>
 
-        {/* Helpful Info Hint */}
+        {/* Security Footer Notice */}
         <div style={{
           marginTop: '24px',
-          padding: '12px 14px',
-          background: 'rgba(30, 41, 59, 0.5)',
-          borderRadius: '10px',
-          border: '1px solid rgba(255, 255, 255, 0.06)',
-          fontSize: '12px',
-          color: '#64748B',
           textAlign: 'center',
-          lineHeight: 1.4
+          fontSize: '11px',
+          color: '#475569',
+          letterSpacing: '0.02em'
         }}>
-          <span style={{ color: '#94A3B8' }}>Initial Default Passcode:</span>{' '}
-          <code style={{
-            background: 'rgba(124, 58, 237, 0.25)',
-            color: '#DDD6FE',
-            padding: '2px 6px',
-            borderRadius: '4px',
-            fontFamily: 'monospace',
-            fontWeight: 600
-          }}>
-            falcon2025
-          </code>
-          <div style={{ marginTop: '4px', fontSize: '11px', color: '#64748B' }}>
-            Can be changed anytime in Settings or via VITE_ADMIN_PASSCODE.
-          </div>
+          Authorized access only · Falcon EduFin Analytics
         </div>
       </div>
     </div>
