@@ -1,6 +1,9 @@
 {
-  "name": "falcon-yt-analytics-monorepo",
+  "name": "falcon-yt-analytics",
   "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "workspaces": [
     "frontend"
   ],
