@@ -37,6 +37,10 @@
   "optionalDependencies": {
     "@rolldown/binding-linux-x64-gnu": "1.2.8",
     "@rolldown/binding-linux-x64-musl": "1.2.8",
-    "@rolldown/binding-darwin-arm64": "1.2.8"
+    "@rolldown/binding-darwin-arm64": "1.2.8",
+    "lightningcss-linux-x64-gnu": "^1.29.0",
+    "lightningcss-linux-x64-musl": "^1.29.0",
+    "@tailwindcss/oxide-linux-x64-gnu": "^4.0.0",
+    "@tailwindcss/oxide-linux-x64-musl": "^4.0.0"
   }
 }
