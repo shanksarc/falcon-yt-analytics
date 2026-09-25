@@ -29,6 +29,7 @@ htmlcov/
 backend/*.db
 backend/*.sqlite
 database.sqlite
+!backend/falcon_yt.db
 
 # Environment variables & secrets
 .env
