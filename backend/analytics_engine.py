@@ -282,7 +282,12 @@ def get_channel_summary() -> Dict[str, Any]:
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    # Query video stats, excluding legacy demo/seed videos if real videos exist
+    cursor.execute("SELECT COUNT(*) FROM videos WHERE id NOT LIKE 'cfa_%' AND id NOT LIKE 'frm_%' AND id NOT LIKE 'gen_%'")
+    real_count = cursor.fetchone()[0]
+    demo_filter = "WHERE id NOT LIKE 'cfa_%' AND id NOT LIKE 'frm_%' AND id NOT LIKE 'gen_%'" if real_count > 0 else ""
+
+    cursor.execute(f"""
         SELECT 
             COUNT(id) as total_videos,
             COALESCE(SUM(views), 0) as total_views,
@@ -291,10 +296,12 @@ def get_channel_summary() -> Dict[str, Any]:
             ROUND(AVG(ctr), 2) as avg_ctr,
             ROUND(AVG(avg_view_duration), 0) as avg_avd
         FROM videos
+        {demo_filter}
     """)
     row = dict(cursor.fetchone())
 
     # YoY channel views growth
+    mm_filter = "WHERE video_id NOT LIKE 'cfa_%' AND video_id NOT LIKE 'frm_%' AND video_id LIKE 'gen_%'" if real_count > 0 else ""
     cursor.execute("""
         SELECT 
             SUM(CASE WHEN month LIKE '2024%' THEN views ELSE 0 END) as cur_views,
@@ -306,8 +313,8 @@ def get_channel_summary() -> Dict[str, Any]:
     prev_v = yoy["prev_views"] or 0
     views_growth = round(((cur_v - prev_v) / (prev_v if prev_v > 0 else 1)) * 100, 1)
 
-    # Check for accurate channel subscriber count in settings
-    cursor.execute("SELECT key, value FROM settings WHERE key IN ('channel_subscribers', 'manual_channel_subscribers')")
+    # Check for accurate channel subscriber count and channel views in settings
+    cursor.execute("SELECT key, value FROM settings WHERE key IN ('channel_subscribers', 'manual_channel_subscribers', 'channel_views', 'manual_channel_views')")
     s_rows = {r["key"]: r["value"] for r in cursor.fetchall()}
     
     channel_subs = None
@@ -322,10 +329,22 @@ def get_channel_summary() -> Dict[str, Any]:
         except (ValueError, TypeError):
             pass
 
+    channel_views = None
+    if s_rows.get("manual_channel_views"):
+        try:
+            channel_views = int(s_rows["manual_channel_views"])
+        except (ValueError, TypeError):
+            pass
+    if channel_views is None and s_rows.get("channel_views"):
+        try:
+            channel_views = int(s_rows["channel_views"])
+        except (ValueError, TypeError):
+            pass
+
     conn.close()
     return {
         "total_videos": row["total_videos"],
-        "total_views": row["total_views"],
+        "total_views": channel_views if (channel_views is not None and channel_views > 0) else row["total_views"],
         "total_watch_time": round(row["total_watch_time"], 1),
         "total_subscribers": channel_subs if channel_subs is not None else row["total_subscribers"],
         "avg_ctr": row["avg_ctr"] or 0.0,

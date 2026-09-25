@@ -171,9 +171,11 @@ export default function PerformanceOverviewView({ onNavigateDrilldown }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '16px' }}>
           <div style={styles.kpiCard}>
             <div style={styles.kpiLabel}>Channel views</div>
-            <div style={styles.kpiValue}>{formatNum(summary?.total_views)}</div>
+            <div style={styles.kpiValue} title={`${summary?.total_views?.toLocaleString() || 0} total views`}>
+              {formatNum(summary?.total_views)}
+            </div>
             <div style={{ ...styles.kpiSub, color: '#0D9488', fontWeight: 500 }}>
-              +{summary?.yoy_growth_pct}% YoY growth
+              {summary?.total_views ? `${summary.total_views.toLocaleString()} total views` : `+${summary?.yoy_growth_pct}% YoY`}
             </div>
           </div>
 

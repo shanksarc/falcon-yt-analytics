@@ -93,6 +93,12 @@ def sync_youtube_channel() -> Dict[str, Any]:
 
     print(f"Retrieved {len(all_video_ids)} total video IDs from channel uploads.")
 
+    # Clean up any legacy demo/seed videos to ensure clean channel views and video counts
+    cursor.execute("DELETE FROM videos WHERE id LIKE 'cfa_%' OR id LIKE 'frm_%' OR id LIKE 'gen_%'")
+    cursor.execute("DELETE FROM monthly_metrics WHERE video_id LIKE 'cfa_%' OR video_id LIKE 'frm_%' OR video_id LIKE 'gen_%'")
+    cursor.execute("DELETE FROM list_videos WHERE video_id LIKE 'cfa_%' OR video_id LIKE 'frm_%' OR video_id LIKE 'gen_%'")
+    conn.commit()
+
     # 3. Fetch full video statistics and snippet in chunks of 50
     now_str = datetime.utcnow().isoformat()
     cfa_exam_months = [2, 5, 8, 11]
@@ -320,6 +326,10 @@ def sync_youtube_channel() -> Dict[str, Any]:
             INSERT INTO settings (key, value) VALUES (?, ?)
             ON CONFLICT(key) DO UPDATE SET value = excluded.value
         """, (key, val))
+
+    # Clean up any orphaned entries in list_videos and monthly_metrics
+    cursor.execute("DELETE FROM list_videos WHERE video_id NOT IN (SELECT id FROM videos)")
+    cursor.execute("DELETE FROM monthly_metrics WHERE video_id NOT IN (SELECT id FROM videos)")
 
     conn.commit()
     conn.close()

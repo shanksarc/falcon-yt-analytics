@@ -7,13 +7,21 @@ IS_VERCEL = bool(os.environ.get("VERCEL"))
 DB_DIR = "/tmp" if IS_VERCEL else os.path.dirname(__file__)
 DB_PATH = os.path.join(DB_DIR, "falcon_yt.db")
 
-# If on Vercel and bundled DB exists, copy it to /tmp
+# If on Vercel and bundled DB exists, ensure /tmp/falcon_yt.db is synced
 if IS_VERCEL:
     bundled_db = os.path.join(os.path.dirname(__file__), "falcon_yt.db")
-    if os.path.exists(bundled_db) and not os.path.exists(DB_PATH):
+    if os.path.exists(bundled_db):
         try:
             import shutil
-            shutil.copy2(bundled_db, DB_PATH)
+            should_copy = not os.path.exists(DB_PATH)
+            if not should_copy:
+                b_size = os.path.getsize(bundled_db)
+                t_size = os.path.getsize(DB_PATH)
+                # Overwrite if /tmp has outdated smaller file (<500KB) while bundled is full real DB (>500KB)
+                if t_size < 500000 and b_size > 500000:
+                    should_copy = True
+            if should_copy:
+                shutil.copy2(bundled_db, DB_PATH)
         except Exception as _e:
             print(f"Notice copying bundled DB: {_e}")
 
@@ -469,41 +477,47 @@ def ensure_seed_syllabus_topics(cursor):
         VALUES ('list_top_fi_abs', 'Question Solving', 1)
     """)
 
-    # Seed some video mappings so initial coverage grid is immediately alive
-    initial_mappings = [
-        ("list_top_fi_dur", "cfa_l1_01"),
-        ("list_top_fi_pricing", "cfa_l1_01"),
-        ("list_top_fi_curves", "cfa_l1_01"),
-        ("list_top_fi_dur", "cfa_l1_08"), # Question solving video!
-        ("list_top_quant_hyp", "cfa_l1_02"),
-        ("list_top_quant_dist", "cfa_l1_02"),
-        ("list_top_fsa_statements", "cfa_l1_03"),
-        ("list_top_ethics_standards", "cfa_l1_05"),
-        ("list_top_ethics_gips", "cfa_l1_05"),
-    ]
-    for tid, vid in initial_mappings:
-        cursor.execute("""
-            INSERT OR IGNORE INTO list_videos (list_id, video_id, auto_assigned, created_at)
-            VALUES (?, ?, 1, ?)
-        """, (tid, vid, now_str))
+    # Clean up legacy demo/seed videos if real YouTube channel videos exist
+    cursor.execute("SELECT COUNT(*) FROM videos WHERE id NOT LIKE 'cfa_%' AND id NOT LIKE 'frm_%' AND id NOT LIKE 'gen_%'")
+    real_video_count = cursor.fetchone()[0]
+    if real_video_count > 0:
+        cursor.execute("DELETE FROM videos WHERE id LIKE 'cfa_%' OR id LIKE 'frm_%' OR id LIKE 'gen_%'")
+        cursor.execute("DELETE FROM monthly_metrics WHERE video_id LIKE 'cfa_%' OR video_id LIKE 'frm_%' OR video_id LIKE 'gen_%'")
+        cursor.execute("DELETE FROM list_videos WHERE video_id LIKE 'cfa_%' OR video_id LIKE 'frm_%' OR video_id LIKE 'gen_%'")
+    else:
+        # Seed video mappings only if database is completely empty and in demo mode
+        initial_mappings = [
+            ("list_top_fi_dur", "cfa_l1_01"),
+            ("list_top_fi_pricing", "cfa_l1_01"),
+            ("list_top_fi_curves", "cfa_l1_01"),
+            ("list_top_fi_dur", "cfa_l1_08"),
+            ("list_top_quant_hyp", "cfa_l1_02"),
+            ("list_top_quant_dist", "cfa_l1_02"),
+            ("list_top_fsa_statements", "cfa_l1_03"),
+            ("list_top_ethics_standards", "cfa_l1_05"),
+            ("list_top_ethics_gips", "cfa_l1_05"),
+        ]
+        for tid, vid in initial_mappings:
+            cursor.execute("""
+                INSERT OR IGNORE INTO list_videos (list_id, video_id, auto_assigned, created_at)
+                VALUES (?, ?, 1, ?)
+            """, (tid, vid, now_str))
 
-    # Seed a planned video for yellow cell demonstration
-    cursor.execute("""
-        INSERT OR IGNORE INTO planned_videos (id, title, status, format, notes, created_at, updated_at)
-        VALUES ('pv_fi_credit_rev', 'Credit Analysis & Corporate Spreads - Revision', 'Planned', 'Revision', 'Planned via Syllabus Matcher', ?, ?)
-    """, (now_str, now_str))
-    cursor.execute("""
-        INSERT OR IGNORE INTO planned_video_lists (planned_video_id, list_id)
-        VALUES ('pv_fi_credit_rev', 'list_top_fi_credit')
-    """)
-    cursor.execute("""
-        INSERT OR IGNORE INTO planned_video_lists (planned_video_id, list_id)
-        VALUES ('pv_fi_credit_rev', 'list_cfa_l1_fi')
-    """)
-    cursor.execute("""
-        INSERT OR IGNORE INTO planned_video_lists (planned_video_id, list_id)
-        VALUES ('pv_fi_credit_rev', 'list_cfa_l1')
-    """)
+    # Seed planned video if none exist
+    cursor.execute("SELECT COUNT(*) FROM planned_videos")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("""
+            INSERT OR IGNORE INTO planned_videos (id, title, status, format, notes, created_at, updated_at)
+            VALUES ('pv_fi_credit_rev', 'Credit Analysis & Corporate Spreads - Revision', 'Planned', 'Revision', 'Planned via Syllabus Matcher', ?, ?)
+        """, (now_str, now_str))
+        for lid in ['list_top_fi_credit', 'list_cfa_l1_fi', 'list_cfa_l1']:
+            cursor.execute("""
+                INSERT OR IGNORE INTO planned_video_lists (planned_video_id, list_id)
+                VALUES ('pv_fi_credit_rev', ?)
+            """, (lid,))
+
+    conn.commit()
+    conn.close()
 
 
 if __name__ == "__main__":
