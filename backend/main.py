@@ -55,6 +55,19 @@ from youtube_client import YouTubeClient
 
 init_db()
 
+# Auto-seed sample CFA/FRM dataset if freshly deployed database is empty
+try:
+    _conn = get_connection()
+    _cursor = _conn.cursor()
+    _cursor.execute("SELECT COUNT(*) FROM videos")
+    _count = _cursor.fetchone()[0]
+    if _count == 0:
+        print("Fresh database detected. Initializing CFA/FRM dataset...")
+        generate_seed_data()
+    _conn.close()
+except Exception as _e:
+    print(f"Startup database check notice: {_e}")
+
 app = FastAPI(
     title="Falcon CFA/FRM YouTube Analytics API",
     version="2.0.0",
