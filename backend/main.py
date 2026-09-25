@@ -682,10 +682,10 @@ def google_oauth_callback(request: Request, code: Optional[str] = None, error: O
             "expiry": expiry_val.isoformat() if expiry_val is not None else None
         }
         yt_client.save_setting("youtube_oauth_credentials", json.dumps(creds_data))
-        return RedirectResponse(url="http://localhost:5173/?oauth_connected=1")
+        return RedirectResponse(url=f"{frontend_url}/?oauth_connected=1")
     except Exception as e:
         err_str = urllib.parse.quote(str(e))
-        return RedirectResponse(url=f"http://localhost:5173/?oauth_error={err_str}")
+        return RedirectResponse(url=f"{frontend_url}/?oauth_error={err_str}")
 
 @app.post("/api/auth/google/disconnect")
 def google_oauth_disconnect():
