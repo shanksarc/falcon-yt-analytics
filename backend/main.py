@@ -69,7 +69,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-ADMIN_KEY = os.environ.get("FALCON_ADMIN_KEY", "falcon2025")
+ADMIN_KEY = os.environ.get("FALCON_ADMIN_KEY", "")
 REQUIRE_AUTH = os.environ.get("REQUIRE_AUTH", "false").lower() in ("true", "1", "yes")
 
 @app.middleware("http")
@@ -82,7 +82,7 @@ async def verify_admin_key(request: Request, call_next):
         # Exclude Google OAuth routes and basic health status
         if not (request.url.path.startswith("/api/auth/google") or request.url.path == "/api/status"):
             provided_key = request.headers.get("x-admin-key") or request.query_params.get("admin_key")
-            if provided_key != ADMIN_KEY:
+            if not ADMIN_KEY or provided_key != ADMIN_KEY:
                 return JSONResponse(status_code=401, content={"detail": "Unauthorized: Invalid or missing Falcon Admin Key"})
     
     return await call_next(request)

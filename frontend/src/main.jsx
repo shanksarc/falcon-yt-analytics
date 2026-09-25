@@ -23,7 +23,7 @@ window.fetch = async (input, init = {}) => {
     }
   }
 
-  const token = localStorage.getItem('falcon_admin_token') || 'falcon2025';
+  const token = localStorage.getItem('falcon_admin_token') || '';
   const headers = new Headers(init.headers || {});
   if (!headers.has('x-admin-key') && token) {
     headers.set('x-admin-key', token);

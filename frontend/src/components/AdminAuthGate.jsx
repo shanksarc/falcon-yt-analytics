@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, ShieldCheck, Eye, EyeOff, ArrowRight, Sparkles, KeyRound } from 'lucide-react';
+import { Lock, ShieldCheck, Eye, EyeOff, ArrowRight, KeyRound, CheckCircle2 } from 'lucide-react';
 
-const DEFAULT_KEY = import.meta.env.VITE_ADMIN_PASSCODE || 'falcon2025';
+const ENV_KEY = (import.meta.env.VITE_ADMIN_PASSCODE || '').trim();
 
 export function getAdminPasscode() {
-  return localStorage.getItem('falcon_admin_custom_passcode') || DEFAULT_KEY;
+  const custom = (localStorage.getItem('falcon_admin_custom_passcode') || '').trim();
+  return custom || ENV_KEY || '';
+}
+
+export function isPasscodeConfigured() {
+  return Boolean(getAdminPasscode());
 }
 
 export function setCustomAdminPasscode(newPasscode) {
-  if (newPasscode) {
-    localStorage.setItem('falcon_admin_custom_passcode', newPasscode);
-    localStorage.setItem('falcon_admin_token', newPasscode);
+  if (newPasscode && newPasscode.trim()) {
+    const clean = newPasscode.trim();
+    localStorage.setItem('falcon_admin_custom_passcode', clean);
+    localStorage.setItem('falcon_admin_token', clean);
   }
 }
 
@@ -23,9 +29,20 @@ export default function AdminAuthGate({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('falcon_admin_session') === 'true';
   });
+
+  const [hasConfiguredPasscode, setHasConfiguredPasscode] = useState(() => {
+    return isPasscodeConfigured();
+  });
+
+  // Login form state
   const [passcode, setPasscode] = useState('');
   const [showPasscode, setShowPasscode] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+
+  // Setup form state (used only on very first launch if no password is configured)
+  const [setupPasscode, setSetupPasscode] = useState('');
+  const [confirmPasscode, setConfirmPasscode] = useState('');
+
   const [errorMsg, setErrorMsg] = useState('');
   const [isShaking, setIsShaking] = useState(false);
 
@@ -35,12 +52,49 @@ export default function AdminAuthGate({ children }) {
     return () => window.removeEventListener('falcon_admin_logout', handleLogoutEvent);
   }, []);
 
+  const triggerShake = (msg) => {
+    setErrorMsg(msg);
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 500);
+  };
+
+  // Handle first-time password creation
+  const handleSetupPasscode = (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+
+    if (!setupPasscode || setupPasscode.length < 4) {
+      triggerShake('Passcode must be at least 4 characters long.');
+      return;
+    }
+    if (setupPasscode !== confirmPasscode) {
+      triggerShake('Passcodes do not match. Please verify.');
+      return;
+    }
+
+    setCustomAdminPasscode(setupPasscode);
+    if (rememberMe) {
+      localStorage.setItem('falcon_admin_session', 'true');
+    } else {
+      sessionStorage.setItem('falcon_admin_session', 'true');
+    }
+    setHasConfiguredPasscode(true);
+    setIsAuthenticated(true);
+  };
+
+  // Handle standard login
   const handleLogin = (e) => {
     e.preventDefault();
     setErrorMsg('');
 
     const expected = getAdminPasscode();
-    if (passcode.trim() === expected || passcode.trim() === DEFAULT_KEY) {
+    if (!expected) {
+      // No passcode set yet, switch to setup
+      setHasConfiguredPasscode(false);
+      return;
+    }
+
+    if (passcode.trim() === expected) {
       if (rememberMe) {
         localStorage.setItem('falcon_admin_session', 'true');
         localStorage.setItem('falcon_admin_token', passcode.trim());
@@ -50,9 +104,7 @@ export default function AdminAuthGate({ children }) {
       }
       setIsAuthenticated(true);
     } else {
-      setErrorMsg('Incorrect Admin Passcode. Please check and try again.');
-      setIsShaking(true);
-      setTimeout(() => setIsShaking(false), 500);
+      triggerShake('Incorrect Admin Passcode. Please check and try again.');
     }
   };
 
@@ -74,7 +126,7 @@ export default function AdminAuthGate({ children }) {
       position: 'relative',
       overflow: 'hidden'
     }}>
-      {/* Background ambient lighting */}
+      {/* Background ambient glow */}
       <div style={{
         position: 'absolute',
         top: '-150px',
@@ -87,11 +139,11 @@ export default function AdminAuthGate({ children }) {
         pointerEvents: 'none',
       }} />
 
-      {/* Main Lock Card */}
+      {/* Lock Card */}
       <div style={{
         maxWidth: '440px',
         width: '100%',
-        background: 'rgba(15, 23, 42, 0.78)',
+        background: 'rgba(15, 23, 42, 0.82)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         borderRadius: '24px',
@@ -130,7 +182,7 @@ export default function AdminAuthGate({ children }) {
           </div>
         </div>
 
-        {/* Falcon Icon & Title */}
+        {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <div style={{
             width: '64px',
@@ -154,7 +206,7 @@ export default function AdminAuthGate({ children }) {
             margin: '0 0 6px 0',
             letterSpacing: '-0.02em'
           }}>
-            Falcon YT Analytics
+            {hasConfiguredPasscode ? 'Falcon YT Analytics' : 'Set Admin Master Passcode'}
           </h1>
           <p style={{
             fontSize: '13px',
@@ -162,154 +214,238 @@ export default function AdminAuthGate({ children }) {
             margin: 0,
             lineHeight: 1.5
           }}>
-            Single-administrator console. Enter your admin passcode to unlock full access.
+            {hasConfiguredPasscode
+              ? 'Single-administrator console. Enter your admin passcode to unlock full access.'
+              : 'Choose a private passcode to secure this console. You will only need to enter it once.'}
           </p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '12px',
-              fontWeight: 600,
-              color: '#CBD5E1',
-              marginBottom: '8px',
-              letterSpacing: '0.02em'
-            }}>
-              ADMIN PASSCODE
-            </label>
-            <div style={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center'
-            }}>
-              <div style={{
-                position: 'absolute',
-                left: '14px',
-                color: '#64748B',
-                pointerEvents: 'none',
-                display: 'flex',
-                alignItems: 'center'
-              }}>
-                <KeyRound size={16} />
-              </div>
+        {/* If no passcode configured yet: First-time setup */}
+        {!hasConfiguredPasscode ? (
+          <form onSubmit={handleSetupPasscode} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#CBD5E1', marginBottom: '6px' }}>
+                CREATE PASSCODE
+              </label>
               <input
-                type={showPasscode ? 'text' : 'password'}
+                type="password"
                 autoFocus
-                placeholder="Enter admin passcode"
-                value={passcode}
+                placeholder="Choose your secret admin passcode"
+                value={setupPasscode}
                 onChange={(e) => {
-                  setPasscode(e.target.value);
+                  setSetupPasscode(e.target.value);
                   if (errorMsg) setErrorMsg('');
                 }}
                 style={{
                   width: '100%',
-                  padding: '12px 44px 12px 40px',
+                  padding: '12px 14px',
                   background: 'rgba(30, 41, 59, 0.8)',
-                  border: errorMsg ? '1px solid #EF4444' : '1px solid rgba(255, 255, 255, 0.15)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
                   borderRadius: '12px',
                   fontSize: '14px',
                   color: '#FFFFFF',
-                  outline: 'none',
-                  transition: 'border-color 0.2s, box-shadow 0.2s',
-                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)'
+                  outline: 'none'
                 }}
               />
-              <button
-                type="button"
-                onClick={() => setShowPasscode(!showPasscode)}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#94A3B8',
-                  cursor: 'pointer',
-                  padding: '6px',
-                  display: 'flex',
-                  alignItems: 'center'
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#CBD5E1', marginBottom: '6px' }}>
+                CONFIRM PASSCODE
+              </label>
+              <input
+                type="password"
+                placeholder="Re-enter passcode to confirm"
+                value={confirmPasscode}
+                onChange={(e) => {
+                  setConfirmPasscode(e.target.value);
+                  if (errorMsg) setErrorMsg('');
                 }}
-                title={showPasscode ? 'Hide passcode' : 'Show passcode'}
-              >
-                {showPasscode ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  background: 'rgba(30, 41, 59, 0.8)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  color: '#FFFFFF',
+                  outline: 'none'
+                }}
+              />
             </div>
 
             {errorMsg && (
-              <div style={{
-                marginTop: '8px',
-                fontSize: '12px',
-                color: '#F87171',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}>
-                <span>•</span>
-                <span>{errorMsg}</span>
+              <div style={{ fontSize: '12px', color: '#F87171' }}>
+                • {errorMsg}
               </div>
             )}
-          </div>
 
-          {/* Remember Me Checkbox */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '4px 0'
-          }}>
-            <label style={{
+            <button
+              type="submit"
+              style={{
+                width: '100%',
+                padding: '13px 20px',
+                background: 'linear-gradient(135deg, #7C3AED 0%, #6366F1 100%)',
+                border: 'none',
+                borderRadius: '12px',
+                color: '#FFFFFF',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 14px 0 rgba(124, 58, 237, 0.45)',
+                marginTop: '8px'
+              }}
+            >
+              <span>Save Passcode & Unlock</span>
+              <ArrowRight size={16} />
+            </button>
+          </form>
+        ) : (
+          /* Standard Login Form */
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: '#CBD5E1',
+                marginBottom: '8px',
+                letterSpacing: '0.02em'
+              }}>
+                ADMIN PASSCODE
+              </label>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <div style={{
+                  position: 'absolute',
+                  left: '14px',
+                  color: '#64748B',
+                  pointerEvents: 'none',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  <KeyRound size={16} />
+                </div>
+                <input
+                  type={showPasscode ? 'text' : 'password'}
+                  autoFocus
+                  placeholder="Enter admin passcode"
+                  value={passcode}
+                  onChange={(e) => {
+                    setPasscode(e.target.value);
+                    if (errorMsg) setErrorMsg('');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 44px 12px 40px',
+                    background: 'rgba(30, 41, 59, 0.8)',
+                    border: errorMsg ? '1px solid #EF4444' : '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    color: '#FFFFFF',
+                    outline: 'none',
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasscode(!showPasscode)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#94A3B8',
+                    cursor: 'pointer',
+                    padding: '6px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                  title={showPasscode ? 'Hide passcode' : 'Show passcode'}
+                >
+                  {showPasscode ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+
+              {errorMsg && (
+                <div style={{
+                  marginTop: '8px',
+                  fontSize: '12px',
+                  color: '#F87171',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span>•</span>
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Remember Me Checkbox */}
+            <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              fontSize: '13px',
-              color: '#94A3B8',
-              cursor: 'pointer',
-              userSelect: 'none'
+              justifyContent: 'space-between',
+              padding: '4px 0'
             }}>
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                style={{
-                  accentColor: '#7C3AED',
-                  width: '16px',
-                  height: '16px',
-                  cursor: 'pointer'
-                }}
-              />
-              <span>Remember this browser (Stay logged in)</span>
-            </label>
-          </div>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '13px',
+                color: '#94A3B8',
+                cursor: 'pointer',
+                userSelect: 'none'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  style={{
+                    accentColor: '#7C3AED',
+                    width: '16px',
+                    height: '16px',
+                    cursor: 'pointer'
+                  }}
+                />
+                <span>Remember this browser (Stay logged in)</span>
+              </label>
+            </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            id="admin-btn-unlock"
-            style={{
-              width: '100%',
-              padding: '13px 20px',
-              background: 'linear-gradient(135deg, #7C3AED 0%, #6366F1 100%)',
-              border: 'none',
-              borderRadius: '12px',
-              color: '#FFFFFF',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 14px 0 rgba(124, 58, 237, 0.45)',
-              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
-            onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-          >
-            <span>Unlock Admin Console</span>
-            <ArrowRight size={16} />
-          </button>
-        </form>
+            {/* Submit Button */}
+            <button
+              type="submit"
+              id="admin-btn-unlock"
+              style={{
+                width: '100%',
+                padding: '13px 20px',
+                background: 'linear-gradient(135deg, #7C3AED 0%, #6366F1 100%)',
+                border: 'none',
+                borderRadius: '12px',
+                color: '#FFFFFF',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 14px 0 rgba(124, 58, 237, 0.45)',
+                transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              <span>Unlock Admin Console</span>
+              <ArrowRight size={16} />
+            </button>
+          </form>
+        )}
 
         {/* Security Footer Notice */}
         <div style={{
