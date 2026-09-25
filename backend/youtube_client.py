@@ -10,7 +10,7 @@ _ENV_VAR_MAP = {
     "oauth_client_id": "FALCON_OAUTH_CLIENT_ID",
     "oauth_client_secret": "FALCON_OAUTH_CLIENT_SECRET",
     "youtube_oauth_credentials": "FALCON_OAUTH_CREDENTIALS",
-    "admin_passcode": "FALCON_ADMIN_PASSCODE",
+    "admin_passcode": "FALCON_ADMIN_PASSWORD",
 }
 
 class YouTubeClient:
@@ -27,11 +27,12 @@ class YouTubeClient:
             if env_val:
                 return env_val
 
-        # Support FALCON_ADMIN_KEY as an alias for admin_passcode
+        # Support aliases for admin_passcode / password
         if key == "admin_passcode":
-            admin_key_env = os.environ.get("FALCON_ADMIN_KEY", "").strip()
-            if admin_key_env:
-                return admin_key_env
+            for env_name in ("FALCON_ADMIN_PASSWORD", "FALCON_ADMIN_PASSCODE", "FALCON_ADMIN_KEY"):
+                val = os.environ.get(env_name, "").strip()
+                if val:
+                    return val
 
         # Fall back to DB
         try:
