@@ -39,20 +39,29 @@ def sync_youtube_channel() -> Dict[str, Any]:
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT value FROM settings WHERE key = 'youtube_api_key'")
-    r_key = cursor.fetchone()
-    api_key = r_key['value'] if r_key else None
+    # Read credentials: check env vars first (survive Vercel cold starts), then fall back to DB
+    _ENV_VAR_MAP = {
+        "youtube_api_key": "FALCON_YT_API_KEY",
+        "channel_id": "FALCON_CHANNEL_ID",
+    }
 
-    cursor.execute("SELECT value FROM settings WHERE key = 'channel_id'")
-    r_ch = cursor.fetchone()
-    channel_id = r_ch['value'] if r_ch else None
+    def _get_setting(key: str):
+        env_val = os.environ.get(_ENV_VAR_MAP.get(key, ""), "").strip()
+        if env_val:
+            return env_val
+        cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
+        r = cursor.fetchone()
+        return r['value'] if r else None
+
+    api_key = _get_setting("youtube_api_key")
+    channel_id = _get_setting("channel_id")
 
     if not api_key:
         conn.close()
-        raise ValueError("YouTube API Key is missing. Please check Settings.")
+        raise ValueError("YouTube API Key is missing. Please check Settings or set FALCON_YT_API_KEY env var.")
     if not channel_id:
         conn.close()
-        raise ValueError("YouTube Channel ID is missing. Please check Settings.")
+        raise ValueError("YouTube Channel ID is missing. Please check Settings or set FALCON_CHANNEL_ID env var.")
 
     print(f"Connecting to YouTube Data API for channel: {channel_id}...")
     youtube = build("youtube", "v3", developerKey=api_key)
