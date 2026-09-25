@@ -341,6 +341,17 @@ def sync_youtube_channel() -> Dict[str, Any]:
     cursor.execute("DELETE FROM monthly_metrics WHERE video_id NOT IN (SELECT id FROM videos)")
 
     conn.commit()
+
+    # -------------------------------------------------------------------
+    # Phase 2: Private Analytics via YouTube Analytics API (OAuth)
+    # Runs automatically if OAuth credentials are stored — no extra clicks.
+    # -------------------------------------------------------------------
+    private_result = fetch_private_analytics()
+    if private_result["status"] == "success":
+        print(f"Private analytics phase complete: {private_result}")
+    else:
+        print(f"Private analytics phase: {private_result.get('status')} — {private_result.get('reason', '')}")
+
     conn.close()
 
     print(f"Sync complete! Successfully stored {len(synced_videos)} videos into falcon_yt.db.")
@@ -352,8 +363,199 @@ def sync_youtube_channel() -> Dict[str, Any]:
         "total_channel_views": total_channel_views,
         "total_channel_subscribers": total_channel_subs,
         "course_distribution": course_counts,
-        "synced_at": now_str
+        "synced_at": now_str,
+        "private_analytics": private_result,
     }
+
+
+def fetch_private_analytics() -> Dict[str, Any]:
+    """
+    Calls YouTube Analytics API v2 using OAuth credentials to fetch real private metrics.
+    Opens its own DB connection and is safe to call after the main sync closes its connection.
+
+    Replaces estimated impressions/CTR/watch-time in the videos table with actual values,
+    and rebuilds monthly_metrics with real month-by-month Studio data.
+
+    Returns a dict with status, counts, and any error message.
+    """
+    from youtube_client import YouTubeClient
+    yt_client = YouTubeClient()
+
+    creds = yt_client.get_oauth_credentials()
+    if not creds:
+        return {"status": "skipped", "reason": "No OAuth credentials connected"}
+
+    try:
+        from googleapiclient.discovery import build
+        analytics = build("youtubeAnalytics", "v2", credentials=creds)
+    except Exception as e:
+        return {"status": "error", "reason": f"Failed to initialise Analytics service: {e}"}
+
+    # Open a fresh DB connection for this phase
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+
+        from datetime import date
+        start_date = "2020-01-01"   # covers all possible channel videos
+        end_date = date.today().strftime("%Y-%m-%d")
+
+        # ---------------------------------------------------------------
+        # Step 1: Lifetime per-video metrics (impressions / CTR / etc.)
+        # ---------------------------------------------------------------
+        video_stats: Dict[str, Any] = {}
+        next_page_token = None
+        while True:
+            try:
+                req_kwargs = dict(
+                    ids="channel==MINE",
+                    startDate=start_date,
+                    endDate=end_date,
+                    metrics="views,estimatedMinutesWatched,averageViewDuration,impressions,impressionClickThroughRate,subscribersGained",
+                    dimensions="video",
+                    maxResults=200,
+                    sort="-views"
+                )
+                if next_page_token:
+                    req_kwargs["pageToken"] = next_page_token
+                resp = analytics.reports().query(**req_kwargs).execute()
+            except Exception as e:
+                return {"status": "error", "reason": f"Analytics API error (lifetime metrics): {e}"}
+
+            col_headers = [h["name"] for h in resp.get("columnHeaders", [])]
+            for row in resp.get("rows") or []:
+                rd = dict(zip(col_headers, row))
+                vid_id = rd.get("video")
+                if not vid_id:
+                    continue
+                video_stats[vid_id] = {
+                    "views":              int(float(rd.get("views", 0))),
+                    "watch_time_hours":   round(float(rd.get("estimatedMinutesWatched", 0)) / 60.0, 1),
+                    "avg_view_duration":  int(float(rd.get("averageViewDuration", 0))),
+                    "impressions":        int(float(rd.get("impressions", 0))),
+                    "ctr":                round(float(rd.get("impressionClickThroughRate", 0)), 2),
+                    "subscribers_gained": max(0, int(float(rd.get("subscribersGained", 0)))),
+                }
+
+            next_page_token = resp.get("nextPageToken")
+            if not next_page_token:
+                break
+
+        if not video_stats:
+            return {"status": "error", "reason": "Analytics API returned no video data. Check quota or OAuth scopes."}
+
+        # ---------------------------------------------------------------
+        # Step 2: Update videos table with real private metrics
+        # ---------------------------------------------------------------
+        now_str = datetime.utcnow().isoformat()
+        updated_count = 0
+        for vid_id, stats in video_stats.items():
+            cursor.execute("""
+                UPDATE videos SET
+                    impressions       = ?,
+                    ctr               = ?,
+                    avg_view_duration = ?,
+                    watch_time_hours  = ?,
+                    subscribers_gained = ?,
+                    updated_at        = ?
+                WHERE id = ?
+            """, (
+                stats["impressions"],
+                stats["ctr"],
+                stats["avg_view_duration"],
+                stats["watch_time_hours"],
+                stats["subscribers_gained"],
+                now_str,
+                vid_id
+            ))
+            if cursor.rowcount > 0:
+                updated_count += 1
+
+        # ---------------------------------------------------------------
+        # Step 3: Fetch real monthly breakdown (video × month)
+        # ---------------------------------------------------------------
+        monthly_rows = []
+        next_page_token = None
+        while True:
+            try:
+                req_kwargs = dict(
+                    ids="channel==MINE",
+                    startDate=start_date,
+                    endDate=end_date,
+                    metrics="views,estimatedMinutesWatched,averageViewDuration,impressions,impressionClickThroughRate,subscribersGained",
+                    dimensions="video,month",
+                    maxResults=500,
+                    sort="month,-views"
+                )
+                if next_page_token:
+                    req_kwargs["pageToken"] = next_page_token
+                resp_m = analytics.reports().query(**req_kwargs).execute()
+            except Exception as e:
+                # Monthly breakdown is optional — don't fail the whole sync
+                print(f"Warning: monthly analytics fetch failed ({e}). Using estimated distributions.")
+                break
+
+            col_headers = [h["name"] for h in resp_m.get("columnHeaders", [])]
+            for row in resp_m.get("rows") or []:
+                monthly_rows.append(dict(zip(col_headers, row)))
+
+            next_page_token = resp_m.get("nextPageToken")
+            if not next_page_token:
+                break
+
+        # ---------------------------------------------------------------
+        # Step 4: Replace estimated monthly_metrics with real Studio data
+        # ---------------------------------------------------------------
+        monthly_updated = 0
+        if monthly_rows:
+            # Clear existing real-video monthly data (keep demo seed data if still present)
+            cursor.execute("""
+                DELETE FROM monthly_metrics
+                WHERE video_id NOT LIKE 'cfa_%'
+                  AND video_id NOT LIKE 'frm_%'
+                  AND video_id NOT LIKE 'gen_%'
+            """)
+
+            for rd in monthly_rows:
+                vid_id     = rd.get("video")
+                month_raw  = rd.get("month", "")  # Analytics API returns "YYYY-MM-DD" (1st of month)
+                if not vid_id or not month_raw:
+                    continue
+                month_str = month_raw[:7]  # "2024-01"
+
+                m_views = int(float(rd.get("views", 0)))
+                m_watch = round(float(rd.get("estimatedMinutesWatched", 0)) / 60.0, 1)
+                m_avd   = int(float(rd.get("averageViewDuration", 0)))
+                m_impr  = int(float(rd.get("impressions", 0)))
+                m_ctr   = round(float(rd.get("impressionClickThroughRate", 0)), 2)
+                m_subs  = max(0, int(float(rd.get("subscribersGained", 0))))
+
+                cursor.execute("""
+                    INSERT INTO monthly_metrics (
+                        video_id, month, views, watch_time_hours,
+                        impressions, ctr, avg_view_duration, subscribers_gained
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(video_id, month) DO UPDATE SET
+                        views              = excluded.views,
+                        watch_time_hours   = excluded.watch_time_hours,
+                        impressions        = excluded.impressions,
+                        ctr                = excluded.ctr,
+                        avg_view_duration  = excluded.avg_view_duration,
+                        subscribers_gained = excluded.subscribers_gained
+                """, (vid_id, month_str, m_views, m_watch, m_impr, m_ctr, m_avd, m_subs))
+                monthly_updated += 1
+
+        conn.commit()
+
+        print(f"Private analytics: {updated_count} videos updated, {monthly_updated} monthly rows imported.")
+        return {
+            "status": "success",
+            "videos_updated_with_private_data": updated_count,
+            "monthly_rows_imported": monthly_updated,
+        }
+    finally:
+        conn.close()
+
 
 if __name__ == "__main__":
     result = sync_youtube_channel()

@@ -82,6 +82,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+yt_client = YouTubeClient()
+
 ADMIN_KEY = os.environ.get("FALCON_ADMIN_KEY", "")
 REQUIRE_AUTH = os.environ.get("REQUIRE_AUTH", "false").lower() in ("true", "1", "yes")
 
@@ -92,17 +94,22 @@ async def verify_admin_key(request: Request, call_next):
     
     # If REQUIRE_AUTH is true and request is hitting an API route
     if REQUIRE_AUTH and request.url.path.startswith("/api"):
-        # Exclude Google OAuth routes and basic health status
-        if not (request.url.path.startswith("/api/auth/google") or request.url.path == "/api/status"):
+        # Exclude Google OAuth routes, admin auth endpoints, and basic health status
+        if not (request.url.path.startswith("/api/auth") or request.url.path == "/api/status"):
             provided_key = request.headers.get("x-admin-key") or request.query_params.get("admin_key")
-            if not ADMIN_KEY or provided_key != ADMIN_KEY:
+            stored_key = yt_client.get_setting("admin_passcode") or ADMIN_KEY
+            if not stored_key or provided_key != stored_key:
                 return JSONResponse(status_code=401, content={"detail": "Unauthorized: Invalid or missing Falcon Admin Key"})
     
     return await call_next(request)
 
-yt_client = YouTubeClient()
-
 # Request Models
+class AuthPasscodePayload(BaseModel):
+    passcode: str
+
+class AuthChangePasscodePayload(BaseModel):
+    current_passcode: Optional[str] = None
+    new_passcode: str
 class ChangeLogCreate(BaseModel):
     video_id: str
     change_date: str
@@ -691,6 +698,78 @@ def google_oauth_callback(request: Request, code: Optional[str] = None, error: O
 def google_oauth_disconnect():
     yt_client.save_setting("youtube_oauth_credentials", "")
     return {"status": "success", "message": "YouTube OAuth credentials cleared", "has_oauth": False}
+
+# -------------------------------------------------------------
+# Admin Passcode Authentication API
+# -------------------------------------------------------------
+
+@app.get("/api/auth/status")
+def get_auth_passcode_status():
+    stored = yt_client.get_setting("admin_passcode")
+    return {
+        "is_passcode_configured": bool(stored and len(stored.strip()) > 0),
+    }
+
+@app.post("/api/auth/setup")
+def setup_auth_passcode(payload: AuthPasscodePayload):
+    stored = yt_client.get_setting("admin_passcode")
+    if stored and len(stored.strip()) > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail="A master admin passcode is already configured. Please log in with your existing passcode."
+        )
+    clean = (payload.passcode or "").strip()
+    if len(clean) < 4:
+        raise HTTPException(status_code=400, detail="Passcode must be at least 4 characters long.")
+    
+    yt_client.save_setting("admin_passcode", clean)
+    return {
+        "status": "success",
+        "token": clean,
+        "is_passcode_configured": True,
+        "message": "Admin master passcode permanently configured."
+    }
+
+@app.post("/api/auth/login")
+def login_auth_passcode(payload: AuthPasscodePayload):
+    stored = yt_client.get_setting("admin_passcode")
+    if not stored or len(stored.strip()) == 0:
+        return {
+            "status": "unconfigured",
+            "is_passcode_configured": False,
+            "message": "No passcode configured yet. First-time setup required."
+        }
+    clean = (payload.passcode or "").strip()
+    if clean == stored.strip():
+        return {
+            "status": "success",
+            "token": clean,
+            "is_passcode_configured": True
+        }
+    else:
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect admin passcode. Please check and try again."
+        )
+
+@app.post("/api/auth/change-passcode")
+def change_auth_passcode(payload: AuthChangePasscodePayload):
+    stored = yt_client.get_setting("admin_passcode")
+    new_passcode = (payload.new_passcode or "").strip()
+    if len(new_passcode) < 4:
+        raise HTTPException(status_code=400, detail="New passcode must be at least 4 characters long.")
+    
+    if stored and len(stored.strip()) > 0:
+        current = (payload.current_passcode or "").strip()
+        if current != stored.strip():
+            raise HTTPException(status_code=401, detail="Current passcode does not match. Please verify your current passcode.")
+    
+    yt_client.save_setting("admin_passcode", new_passcode)
+    return {
+        "status": "success",
+        "token": new_passcode,
+        "message": "Admin passcode successfully updated across all devices."
+    }
 
 @app.post("/api/youtube/sync")
 def sync_channel_endpoint():

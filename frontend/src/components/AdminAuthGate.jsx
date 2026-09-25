@@ -1,38 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, ShieldCheck, Eye, EyeOff, ArrowRight, KeyRound, CheckCircle2 } from 'lucide-react';
 
-const ENV_KEY = (import.meta.env.VITE_ADMIN_PASSCODE || '').trim();
-
-export function getAdminPasscode() {
-  const custom = (localStorage.getItem('falcon_admin_custom_passcode') || '').trim();
-  return custom || ENV_KEY || '';
-}
-
-export function isPasscodeConfigured() {
-  return Boolean(getAdminPasscode());
-}
-
-export function setCustomAdminPasscode(newPasscode) {
+export async function setCustomAdminPasscode(newPasscode, currentPasscode = '') {
   if (newPasscode && newPasscode.trim()) {
     const clean = newPasscode.trim();
-    localStorage.setItem('falcon_admin_custom_passcode', clean);
     localStorage.setItem('falcon_admin_token', clean);
+    try {
+      const res = await fetch('/api/auth/change-passcode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_passcode: currentPasscode || clean, new_passcode: clean })
+      });
+      const data = await res.json();
+      return { success: res.ok, message: data.message || data.detail };
+    } catch (e) {
+      return { success: false, message: e.message };
+    }
   }
+  return { success: false, message: 'Passcode cannot be empty.' };
 }
 
 export function logoutAdmin() {
   localStorage.removeItem('falcon_admin_session');
+  localStorage.removeItem('falcon_admin_token');
+  sessionStorage.removeItem('falcon_admin_session');
   window.dispatchEvent(new Event('falcon_admin_logout'));
 }
 
 export default function AdminAuthGate({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('falcon_admin_session') === 'true';
-  });
-
-  const [hasConfiguredPasscode, setHasConfiguredPasscode] = useState(() => {
-    return isPasscodeConfigured();
-  });
+  const [loadingStatus, setLoadingStatus] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasConfiguredPasscode, setHasConfiguredPasscode] = useState(false);
 
   // Login form state
   const [passcode, setPasscode] = useState('');
@@ -47,9 +45,64 @@ export default function AdminAuthGate({ children }) {
   const [isShaking, setIsShaking] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
+    async function initAuth() {
+      try {
+        const res = await fetch('/api/auth/status');
+        const data = await res.json();
+        const configured = Boolean(data.is_passcode_configured);
+
+        if (!isMounted) return;
+        setHasConfiguredPasscode(configured);
+
+        if (!configured) {
+          // No passcode configured on backend yet -> user must create one
+          setIsAuthenticated(false);
+        } else {
+          // Passcode is configured on backend
+          const session = localStorage.getItem('falcon_admin_session') === 'true' || sessionStorage.getItem('falcon_admin_session') === 'true';
+          const token = localStorage.getItem('falcon_admin_token') || '';
+
+          if (session && token) {
+            // Verify stored token against server
+            try {
+              const loginRes = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ passcode: token })
+              });
+              if (loginRes.ok) {
+                if (isMounted) setIsAuthenticated(true);
+              } else {
+                localStorage.removeItem('falcon_admin_session');
+                localStorage.removeItem('falcon_admin_token');
+                sessionStorage.removeItem('falcon_admin_session');
+                if (isMounted) setIsAuthenticated(false);
+              }
+            } catch (err) {
+              // Network issue, assume authenticated if session flag is set
+              if (isMounted) setIsAuthenticated(true);
+            }
+          } else {
+            if (isMounted) setIsAuthenticated(false);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to check auth status:', err);
+      } finally {
+        if (isMounted) setLoadingStatus(false);
+      }
+    }
+
+    initAuth();
+
     const handleLogoutEvent = () => setIsAuthenticated(false);
     window.addEventListener('falcon_admin_logout', handleLogoutEvent);
-    return () => window.removeEventListener('falcon_admin_logout', handleLogoutEvent);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('falcon_admin_logout', handleLogoutEvent);
+    };
   }, []);
 
   const triggerShake = (msg) => {
@@ -58,8 +111,8 @@ export default function AdminAuthGate({ children }) {
     setTimeout(() => setIsShaking(false), 500);
   };
 
-  // Handle first-time password creation
-  const handleSetupPasscode = (e) => {
+  // Handle first-time password creation (persisted to backend database)
+  const handleSetupPasscode = async (e) => {
     e.preventDefault();
     setErrorMsg('');
 
@@ -72,29 +125,54 @@ export default function AdminAuthGate({ children }) {
       return;
     }
 
-    setCustomAdminPasscode(setupPasscode);
-    if (rememberMe) {
-      localStorage.setItem('falcon_admin_session', 'true');
-    } else {
-      sessionStorage.setItem('falcon_admin_session', 'true');
+    try {
+      const res = await fetch('/api/auth/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode: setupPasscode.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        triggerShake(data.detail || 'Failed to save master passcode.');
+        return;
+      }
+
+      if (rememberMe) {
+        localStorage.setItem('falcon_admin_session', 'true');
+        localStorage.setItem('falcon_admin_token', setupPasscode.trim());
+      } else {
+        sessionStorage.setItem('falcon_admin_session', 'true');
+        localStorage.setItem('falcon_admin_token', setupPasscode.trim());
+      }
+      setHasConfiguredPasscode(true);
+      setIsAuthenticated(true);
+    } catch (err) {
+      triggerShake('Network error saving passcode: ' + err.message);
     }
-    setHasConfiguredPasscode(true);
-    setIsAuthenticated(true);
   };
 
-  // Handle standard login
-  const handleLogin = (e) => {
+  // Handle standard login (verified against backend database)
+  const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMsg('');
 
-    const expected = getAdminPasscode();
-    if (!expected) {
-      // No passcode set yet, switch to setup
-      setHasConfiguredPasscode(false);
+    if (!passcode || !passcode.trim()) {
+      triggerShake('Please enter your admin passcode.');
       return;
     }
 
-    if (passcode.trim() === expected) {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode: passcode.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        triggerShake(data.detail || 'Incorrect Admin Passcode. Please check and try again.');
+        return;
+      }
+
       if (rememberMe) {
         localStorage.setItem('falcon_admin_session', 'true');
         localStorage.setItem('falcon_admin_token', passcode.trim());
@@ -103,10 +181,38 @@ export default function AdminAuthGate({ children }) {
         localStorage.setItem('falcon_admin_token', passcode.trim());
       }
       setIsAuthenticated(true);
-    } else {
-      triggerShake('Incorrect Admin Passcode. Please check and try again.');
+    } catch (err) {
+      triggerShake('Network error verifying passcode: ' + err.message);
     }
   };
+
+  if (loadingStatus) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        width: '100%',
+        background: '#0F172A',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#94A3B8',
+        fontFamily: 'Inter, sans-serif'
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+          <div style={{
+            width: '36px',
+            height: '36px',
+            border: '3px solid rgba(124, 58, 237, 0.2)',
+            borderTopColor: '#7C3AED',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite'
+          }} />
+          <span style={{ fontSize: '13px' }}>Verifying Falcon Security...</span>
+          <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+        </div>
+      </div>
+    );
+  }
 
   if (isAuthenticated) {
     return <>{children}</>;

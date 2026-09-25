@@ -554,12 +554,20 @@ export default function SettingsModal({ onClose, onResetDemo, onSyncChannel, isS
               />
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   if (!newAdminPasscode.trim()) return;
-                  setCustomAdminPasscode(newAdminPasscode.trim());
-                  setPasscodeSuccessMsg('Admin passcode updated successfully!');
-                  setNewAdminPasscode('');
-                  setTimeout(() => setPasscodeSuccessMsg(''), 4000);
+                  if (newAdminPasscode.trim().length < 4) {
+                    alert('Passcode must be at least 4 characters long.');
+                    return;
+                  }
+                  const res = await setCustomAdminPasscode(newAdminPasscode.trim());
+                  if (res.success) {
+                    setPasscodeSuccessMsg('Admin passcode permanently updated across all devices!');
+                    setNewAdminPasscode('');
+                    setTimeout(() => setPasscodeSuccessMsg(''), 4000);
+                  } else {
+                    alert(res.message || 'Failed to update passcode');
+                  }
                 }}
                 style={{
                   padding: '6px 12px',

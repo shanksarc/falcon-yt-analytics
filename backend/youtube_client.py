@@ -10,6 +10,7 @@ _ENV_VAR_MAP = {
     "oauth_client_id": "FALCON_OAUTH_CLIENT_ID",
     "oauth_client_secret": "FALCON_OAUTH_CLIENT_SECRET",
     "youtube_oauth_credentials": "FALCON_OAUTH_CREDENTIALS",
+    "admin_passcode": "FALCON_ADMIN_PASSCODE",
 }
 
 class YouTubeClient:
@@ -25,6 +26,12 @@ class YouTubeClient:
             env_val = os.environ.get(env_key, "").strip()
             if env_val:
                 return env_val
+
+        # Support FALCON_ADMIN_KEY as an alias for admin_passcode
+        if key == "admin_passcode":
+            admin_key_env = os.environ.get("FALCON_ADMIN_KEY", "").strip()
+            if admin_key_env:
+                return admin_key_env
 
         # Fall back to DB
         try:
@@ -64,14 +71,14 @@ class YouTubeClient:
         }
 
     def get_oauth_credentials(self):
-        """Loads and returns authenticated google.oauth2.credentials.Credentials if present."""
+        """Loads, auto-refreshes if expired, and returns google.oauth2.credentials.Credentials or None."""
         creds_str = self.get_setting("youtube_oauth_credentials")
-        if not creds_str:
+        if not creds_str or not creds_str.strip():
             return None
         try:
             from google.oauth2.credentials import Credentials
             creds_data = json.loads(creds_str)
-            return Credentials(
+            creds = Credentials(
                 token=creds_data.get("token"),
                 refresh_token=creds_data.get("refresh_token"),
                 token_uri=creds_data.get("token_uri", "https://oauth2.googleapis.com/token"),
@@ -79,9 +86,37 @@ class YouTubeClient:
                 client_secret=creds_data.get("client_secret"),
                 scopes=creds_data.get("scopes")
             )
+            # Auto-refresh if expired (access tokens expire after ~1 hour)
+            if creds.expired or not creds.token:
+                if creds.refresh_token:
+                    import google.auth.transport.requests
+                    creds.refresh(google.auth.transport.requests.Request())
+                    self._save_credentials_obj(creds)
+                    print("OAuth access token refreshed successfully.")
+                else:
+                    print("OAuth token expired and no refresh token available. User must reconnect.")
+                    return None
+            return creds
         except Exception as e:
-            print(f"Error loading oauth credentials: {e}")
+            print(f"Error loading/refreshing OAuth credentials: {e}")
             return None
+
+    def _save_credentials_obj(self, creds):
+        """Serialise and persist a refreshed Credentials object back to the DB."""
+        try:
+            expiry_val = getattr(creds, "expiry", None)
+            creds_data = {
+                "token": creds.token,
+                "refresh_token": creds.refresh_token,
+                "token_uri": creds.token_uri,
+                "client_id": creds.client_id,
+                "client_secret": creds.client_secret,
+                "scopes": list(creds.scopes) if creds.scopes else None,
+                "expiry": expiry_val.isoformat() if expiry_val else None,
+            }
+            self.save_setting("youtube_oauth_credentials", json.dumps(creds_data))
+        except Exception as e:
+            print(f"Warning: could not save refreshed OAuth credentials: {e}")
 
     def get_analytics_service(self):
         """Returns authenticated YouTube Analytics API v2 service resource or None."""
