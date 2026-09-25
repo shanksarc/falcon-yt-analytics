@@ -549,16 +549,26 @@ def get_settings(request: Request):
     client_secret = yt_client.get_setting("oauth_client_secret")
     oauth_creds = yt_client.get_setting("youtube_oauth_credentials")
     base_url = get_app_base_url(request)
+    
+    api_key = yt_client.get_setting("youtube_api_key") or ""
+    channel_id = yt_client.get_setting("channel_id") or ""
+    
+    # Check if critical settings are backed by env vars (permanent on Vercel)
+    has_api_key_env = bool(os.environ.get("FALCON_YT_API_KEY", "").strip())
+    has_channel_env = bool(os.environ.get("FALCON_CHANNEL_ID", "").strip())
+    
     return {
-        "youtube_api_key": yt_client.get_setting("youtube_api_key") or "",
-        "channel_id": yt_client.get_setting("channel_id") or "UC_falcon_edufin",
+        "youtube_api_key": api_key,
+        "channel_id": channel_id,
         "oauth_client_id": yt_client.get_setting("oauth_client_id") or "",
         "has_oauth_client_secret": bool(client_secret and len(client_secret.strip()) > 0),
         "has_oauth": bool(oauth_creds and len(oauth_creds.strip()) > 0),
         "oauth_redirect_uri": f"{base_url}/api/auth/google/callback",
         "last_youtube_sync": yt_client.get_setting("last_youtube_sync") or None,
-        "channel_subscribers": int(ch_subs) if ch_subs and ch_subs.isdigit() else 0,
-        "manual_channel_subscribers": int(manual_subs) if manual_subs and manual_subs.isdigit() else None,
+        "channel_subscribers": int(ch_subs) if ch_subs and str(ch_subs).isdigit() else 0,
+        "manual_channel_subscribers": int(manual_subs) if manual_subs and str(manual_subs).isdigit() else None,
+        "has_api_key_env": has_api_key_env,
+        "has_channel_env": has_channel_env,
     }
 
 @app.post("/api/settings")
@@ -576,7 +586,21 @@ def update_settings(settings: SettingsUpdate):
             yt_client.save_setting("manual_channel_subscribers", str(settings.manual_channel_subscribers))
         else:
             yt_client.save_setting("manual_channel_subscribers", "")
-    return {"status": "success"}
+    
+    # Check if critical settings are persisted via env vars (fully permanent on Vercel)
+    has_api_key_env = bool(os.environ.get("FALCON_YT_API_KEY", "").strip())
+    has_channel_env = bool(os.environ.get("FALCON_CHANNEL_ID", "").strip())
+    is_vercel = bool(os.environ.get("VERCEL"))
+    
+    needs_env_setup = is_vercel and (not has_api_key_env or not has_channel_env)
+    return {
+        "status": "success",
+        "needs_env_setup": needs_env_setup,
+        "message": (
+            "Settings saved. Note: for permanent storage on Vercel, add FALCON_YT_API_KEY and FALCON_CHANNEL_ID as Environment Variables in your Vercel project settings."
+            if needs_env_setup else "Settings saved successfully."
+        )
+    }
 
 @app.get("/api/auth/google/login")
 def google_oauth_login(request: Request, redirect: bool = True):

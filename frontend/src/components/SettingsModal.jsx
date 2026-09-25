@@ -19,6 +19,10 @@ export default function SettingsModal({ onClose, onResetDemo, onSyncChannel, isS
   const [fetchedSubs, setFetchedSubs] = useState(0);
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
+  const [needsEnvSetup, setNeedsEnvSetup] = useState(false);
+  const [hasApiKeyEnv, setHasApiKeyEnv] = useState(false);
+  const [hasChannelEnv, setHasChannelEnv] = useState(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState(null);
   const [localSyncing, setLocalSyncing] = useState(false);
   const [isConnectingOAuth, setIsConnectingOAuth] = useState(false);
@@ -44,6 +48,8 @@ export default function SettingsModal({ onClose, onResetDemo, onSyncChannel, isS
       }
       setFetchedSubs(data.channel_subscribers || 0);
       setManualSubs(data.manual_channel_subscribers ? String(data.manual_channel_subscribers) : '');
+      setHasApiKeyEnv(!!data.has_api_key_env);
+      setHasChannelEnv(!!data.has_channel_env);
     } catch (err) {
       console.error("Failed to load settings:", err);
     }
@@ -68,12 +74,15 @@ export default function SettingsModal({ onClose, onResetDemo, onSyncChannel, isS
         body: JSON.stringify(payload)
       });
       if (res.ok) {
+        const data = await res.json();
         setSavedSuccess(true);
+        setSaveMsg(data.message || 'Settings saved successfully.');
+        setNeedsEnvSetup(!!data.needs_env_setup);
         if (oauthClientSecret.trim()) {
           setHasOauthClientSecret(true);
           setOauthClientSecret('');
         }
-        setTimeout(() => setSavedSuccess(false), 2500);
+        setTimeout(() => { setSavedSuccess(false); setSaveMsg(''); }, 4000);
       }
     } catch (err) {
       console.error("Failed to save settings:", err);
@@ -253,9 +262,30 @@ export default function SettingsModal({ onClose, onResetDemo, onSyncChannel, isS
           </div>
         )}
 
+        {/* Env var warning banner */}
+        {needsEnvSetup && (
+          <div style={{
+            background: 'rgba(251, 191, 36, 0.08)',
+            border: '1px solid rgba(251, 191, 36, 0.35)',
+            padding: '0.75rem 1rem',
+            borderRadius: 'var(--radius-md)',
+            color: '#f59e0b',
+            marginBottom: '1rem',
+            fontSize: '0.8rem',
+            lineHeight: 1.5
+          }}>
+            <strong>⚠️ Settings saved temporarily.</strong> On Vercel, the database resets between deploys.<br />
+            For <strong>permanent storage</strong>, add these as{' '}
+            <a href="https://vercel.com/docs/projects/environment-variables" target="_blank" rel="noopener noreferrer" style={{ color: '#fbbf24', textDecoration: 'underline' }}>Vercel Environment Variables</a>:
+            <br /><code style={{ background: 'rgba(0,0,0,0.25)', padding: '2px 6px', borderRadius: 4, fontSize: '0.76rem' }}>FALCON_YT_API_KEY</code>{' '}
+            and{' '}
+            <code style={{ background: 'rgba(0,0,0,0.25)', padding: '2px 6px', borderRadius: 4, fontSize: '0.76rem' }}>FALCON_CHANNEL_ID</code>
+          </div>
+        )}
+
         {savedSuccess && (
           <div style={{ background: 'var(--success-bg)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '0.75rem', borderRadius: 'var(--radius-md)', color: 'var(--success-emerald)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
-            <Check size={16} /> Credentials saved! You can now click "Sync Channel Data Now" above.
+            <Check size={16} /> {saveMsg || 'Credentials saved! You can now click "Sync Channel Data Now" above.'}
           </div>
         )}
 

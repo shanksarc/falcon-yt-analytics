@@ -7,21 +7,20 @@ IS_VERCEL = bool(os.environ.get("VERCEL"))
 DB_DIR = "/tmp" if IS_VERCEL else os.path.dirname(__file__)
 DB_PATH = os.path.join(DB_DIR, "falcon_yt.db")
 
-# If on Vercel and bundled DB exists, ensure /tmp/falcon_yt.db is synced
+# If on Vercel and bundled DB exists, copy it to /tmp ONLY if /tmp doesn't have a valid DB yet.
+# We NEVER overwrite an existing /tmp DB because that would erase user-saved settings.
 if IS_VERCEL:
     bundled_db = os.path.join(os.path.dirname(__file__), "falcon_yt.db")
     if os.path.exists(bundled_db):
         try:
             import shutil
-            should_copy = not os.path.exists(DB_PATH)
-            if not should_copy:
-                b_size = os.path.getsize(bundled_db)
-                t_size = os.path.getsize(DB_PATH)
-                # Overwrite if /tmp has outdated smaller file (<500KB) while bundled is full real DB (>500KB)
-                if t_size < 500000 and b_size > 500000:
-                    should_copy = True
+            # Only copy if /tmp DB is missing or tiny/empty (< 50KB = corrupted/blank)
+            should_copy = not os.path.exists(DB_PATH) or os.path.getsize(DB_PATH) < 50000
             if should_copy:
                 shutil.copy2(bundled_db, DB_PATH)
+                print(f"Copied bundled DB to {DB_PATH}")
+            else:
+                print(f"Using existing /tmp DB ({os.path.getsize(DB_PATH)} bytes), not overwriting with bundled copy")
         except Exception as _e:
             print(f"Notice copying bundled DB: {_e}")
 
@@ -333,6 +332,23 @@ def init_db():
     # Do NOT auto-seed or auto-add subjects/topics here to prevent duplicates.
     # (ensure_core_curriculum_lists and ensure_seed_syllabus_topics disabled)
 
+    conn.commit()
+
+    # Seed critical settings from environment variables (ensures credentials survive Vercel cold starts)
+    _env_setting_map = {
+        "youtube_api_key": "FALCON_YT_API_KEY",
+        "channel_id": "FALCON_CHANNEL_ID",
+        "oauth_client_id": "FALCON_OAUTH_CLIENT_ID",
+        "oauth_client_secret": "FALCON_OAUTH_CLIENT_SECRET",
+        "youtube_oauth_credentials": "FALCON_OAUTH_CREDENTIALS",
+    }
+    for setting_key, env_var in _env_setting_map.items():
+        env_val = os.environ.get(env_var, "").strip()
+        if env_val:
+            cursor.execute("""
+                INSERT INTO settings (key, value) VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """, (setting_key, env_val))
     conn.commit()
     conn.close()
 

@@ -3,28 +3,53 @@ import json
 from typing import Dict, Any, List, Optional
 from database import get_connection
 
+# Map setting keys to environment variable names for persistence on Vercel
+_ENV_VAR_MAP = {
+    "youtube_api_key": "FALCON_YT_API_KEY",
+    "channel_id": "FALCON_CHANNEL_ID",
+    "oauth_client_id": "FALCON_OAUTH_CLIENT_ID",
+    "oauth_client_secret": "FALCON_OAUTH_CLIENT_SECRET",
+    "youtube_oauth_credentials": "FALCON_OAUTH_CREDENTIALS",
+}
+
 class YouTubeClient:
     def __init__(self):
         self.api_key = self.get_setting("youtube_api_key")
         self.oauth_credentials = self.get_setting("youtube_oauth_credentials")
 
     def get_setting(self, key: str) -> Optional[str]:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
-        row = cursor.fetchone()
-        conn.close()
-        return row["value"] if row else None
+        """Read a setting, checking env vars first for critical credentials."""
+        # For critical keys, check environment variable first (survives Vercel cold starts)
+        env_key = _ENV_VAR_MAP.get(key)
+        if env_key:
+            env_val = os.environ.get(env_key, "").strip()
+            if env_val:
+                return env_val
+
+        # Fall back to DB
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
+            row = cursor.fetchone()
+            conn.close()
+            return row["value"] if row else None
+        except Exception:
+            return None
 
     def save_setting(self, key: str, value: str):
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO settings (key, value) VALUES (?, ?)
-            ON CONFLICT(key) DO UPDATE SET value = excluded.value
-        """, (key, value))
-        conn.commit()
-        conn.close()
+        """Persist a setting to the DB."""
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO settings (key, value) VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """, (key, value))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"Warning: could not save setting '{key}': {e}")
 
     def get_auth_status(self) -> Dict[str, Any]:
         api_key = self.get_setting("youtube_api_key")
