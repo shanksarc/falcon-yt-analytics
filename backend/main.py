@@ -87,6 +87,15 @@ yt_client = YouTubeClient()
 ADMIN_KEY = os.environ.get("FALCON_ADMIN_KEY", "")
 REQUIRE_AUTH = os.environ.get("REQUIRE_AUTH", "false").lower() in ("true", "1", "yes")
 
+def get_admin_master_key() -> str:
+    return (
+        os.environ.get("FALCON_ADMIN_PASSWORD")
+        or os.environ.get("FALCON_ADMIN_PASSCODE")
+        or os.environ.get("FALCON_ADMIN_KEY")
+        or yt_client.get_setting("admin_passcode")
+        or "falcon2025"
+    ).strip()
+
 @app.middleware("http")
 async def verify_admin_key(request: Request, call_next):
     if request.method == "OPTIONS":
@@ -97,7 +106,7 @@ async def verify_admin_key(request: Request, call_next):
         # Exclude Google OAuth routes, admin auth endpoints, and basic health status
         if not (request.url.path.startswith("/api/auth") or request.url.path == "/api/status"):
             provided_key = request.headers.get("x-admin-key") or request.query_params.get("admin_key")
-            stored_key = yt_client.get_setting("admin_passcode") or ADMIN_KEY
+            stored_key = get_admin_master_key()
             if not stored_key or provided_key != stored_key:
                 return JSONResponse(status_code=401, content={"detail": "Unauthorized: Invalid or missing Falcon Admin Key"})
     
@@ -705,13 +714,7 @@ def google_oauth_disconnect():
 
 @app.get("/api/auth/status")
 def get_auth_passcode_status():
-    stored = (
-        os.environ.get("FALCON_ADMIN_PASSWORD")
-        or os.environ.get("FALCON_ADMIN_PASSCODE")
-        or os.environ.get("FALCON_ADMIN_KEY")
-        or yt_client.get_setting("admin_passcode")
-        or "falcon2025"
-    )
+    stored = get_admin_master_key()
     return {
         "is_passcode_configured": bool(stored and len(stored.strip()) > 0),
     }
@@ -732,13 +735,7 @@ def setup_auth_passcode(payload: AuthPasscodePayload):
 
 @app.post("/api/auth/login")
 def login_auth_passcode(payload: AuthPasscodePayload):
-    stored = (
-        os.environ.get("FALCON_ADMIN_PASSWORD")
-        or os.environ.get("FALCON_ADMIN_PASSCODE")
-        or os.environ.get("FALCON_ADMIN_KEY")
-        or yt_client.get_setting("admin_passcode")
-        or "falcon2025"
-    ).strip()
+    stored = get_admin_master_key()
     
     clean = (payload.passcode or "").strip()
     if clean == stored:

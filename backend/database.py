@@ -14,8 +14,8 @@ if IS_VERCEL:
     if os.path.exists(bundled_db):
         try:
             import shutil
-            # Only copy if /tmp DB is missing or tiny/empty (< 50KB = corrupted/blank)
-            should_copy = not os.path.exists(DB_PATH) or os.path.getsize(DB_PATH) < 50000
+            is_stale = os.path.exists(DB_PATH) and os.path.getmtime(bundled_db) > os.path.getmtime(DB_PATH)
+            should_copy = not os.path.exists(DB_PATH) or os.path.getsize(DB_PATH) < 50000 or is_stale or os.environ.get("FORCE_DB_REFRESH") == "true"
             if should_copy:
                 shutil.copy2(bundled_db, DB_PATH)
                 print(f"Copied bundled DB to {DB_PATH}")

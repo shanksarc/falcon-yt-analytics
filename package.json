@@ -8,6 +8,8 @@
     "frontend"
   ],
   "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "start:backend": "./backend/venv/bin/uvicorn main:app --app-dir ./backend --port 8000 --reload",
     "build": "npm --prefix frontend run build"
   }
 }
