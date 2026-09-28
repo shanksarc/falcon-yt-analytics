@@ -354,6 +354,20 @@ def sync_youtube_channel() -> Dict[str, Any]:
 
     conn.close()
 
+    # -------------------------------------------------------------------
+    # Phase 3: Auto-Matcher Execution for Upload Planner & Syllabus Grid
+    # Runs automatically after sync to reconcile newly published videos.
+    # -------------------------------------------------------------------
+    matcher_results = {}
+    try:
+        from analytics_engine import run_auto_matching, run_topic_video_matching
+        print("Running Upload Planner auto-matcher after sync...")
+        matcher_results["planner"] = run_auto_matching()
+        print("Running Syllabus Matcher auto-matcher after sync...")
+        matcher_results["syllabus"] = run_topic_video_matching()
+    except Exception as _match_err:
+        print(f"Notice running auto-matchers after sync: {_match_err}")
+
     print(f"Sync complete! Successfully stored {len(synced_videos)} videos into falcon_yt.db.")
     return {
         "status": "success",
@@ -365,6 +379,7 @@ def sync_youtube_channel() -> Dict[str, Any]:
         "course_distribution": course_counts,
         "synced_at": now_str,
         "private_analytics": private_result,
+        "auto_matching": matcher_results
     }
 
 

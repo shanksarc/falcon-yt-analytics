@@ -85,11 +85,12 @@ export default function LinkYouTubeModal({ plannedVideo, onClose, onSuccess }) {
     setLinking(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`/api/planner/videos/${plannedVideo.id}/link`, {
+      const res = await fetch(`/api/planner/videos/${encodeURIComponent(plannedVideo.id)}/link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          youtube_url: inputValue
+          youtube_url: inputValue,
+          video_id: extractedId
         })
       });
 
@@ -98,8 +99,8 @@ export default function LinkYouTubeModal({ plannedVideo, onClose, onSuccess }) {
         if (onSuccess) onSuccess(data);
         onClose();
       } else {
-        const err = await res.json();
-        setErrorMsg(err.detail || "Failed to link video");
+        const err = await res.json().catch(() => ({}));
+        setErrorMsg(err.detail || `Failed to link video (HTTP ${res.status})`);
       }
     } catch (err) {
       setErrorMsg("Connection error: " + err.message);
@@ -112,7 +113,7 @@ export default function LinkYouTubeModal({ plannedVideo, onClose, onSuccess }) {
     if (!window.confirm("Unlink this YouTube video and revert status to Planned?")) return;
     setLinking(true);
     try {
-      const res = await fetch(`/api/planner/videos/${plannedVideo.id}/link`, {
+      const res = await fetch(`/api/planner/videos/${encodeURIComponent(plannedVideo.id)}/link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({})
@@ -120,6 +121,9 @@ export default function LinkYouTubeModal({ plannedVideo, onClose, onSuccess }) {
       if (res.ok) {
         if (onSuccess) onSuccess({ unlinked: true });
         onClose();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setErrorMsg(err.detail || "Failed to unlink video");
       }
     } catch (err) {
       setErrorMsg("Failed to unlink: " + err.message);

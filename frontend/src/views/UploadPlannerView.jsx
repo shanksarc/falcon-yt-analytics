@@ -2317,8 +2317,25 @@ export default function UploadPlannerView() {
         <LinkYouTubeModal
           plannedVideo={linkingVideo}
           onClose={() => setLinkingVideo(null)}
-          onSuccess={() => {
+          onSuccess={(updatedInfo) => {
+            const linkedId = linkingVideo.id;
             setLinkingVideo(null);
+            setAllPlannedVideos(prev => prev.map(pv => {
+              if (pv.id === linkedId) {
+                if (updatedInfo?.unlinked) {
+                  return { ...pv, linked_video_id: null, linked_video_title: null, status: 'Planned' };
+                }
+                return {
+                  ...pv,
+                  linked_video_id: updatedInfo?.linked_video_id || pv.linked_video_id,
+                  linked_video_title: updatedInfo?.linked_video?.title || pv.linked_video_title || 'YouTube Video',
+                  linked_video_views: updatedInfo?.linked_video?.views ?? pv.linked_video_views,
+                  status: 'Uploaded',
+                  production_stage: 'Uploaded'
+                };
+              }
+              return pv;
+            }));
             refreshAll();
           }}
         />

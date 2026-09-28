@@ -775,9 +775,11 @@ def sync_channel_endpoint():
         from sync_youtube import sync_youtube_channel
         res = sync_youtube_channel()
         try:
-            run_auto_matching()
-        except Exception:
-            pass
+            from analytics_engine import run_auto_matching, run_topic_video_matching
+            res["planner_matching"] = run_auto_matching()
+            res["syllabus_matching"] = run_topic_video_matching()
+        except Exception as _match_err:
+            print(f"Notice running auto-matchers after sync endpoint: {_match_err}")
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1550,7 +1552,7 @@ def extract_youtube_video_id(url_or_id: Optional[str]) -> Optional[str]:
         m = re.search(p, s)
         if m:
             return m.group(1)
-    return s
+    return None
 
 @app.post("/api/planner/videos/bulk-status")
 def bulk_update_planned_videos_status(payload: BulkStatusRequest):
@@ -1603,6 +1605,13 @@ def link_video(pv_id: str, payload: Optional[LinkVideoPayload] = None):
     cursor = conn.cursor()
     now_str = datetime.now().isoformat()
 
+    # Verify that the planned video exists in the database
+    cursor.execute("SELECT id, title, linked_video_id FROM planned_videos WHERE id = ?", (pv_id,))
+    pv_row = cursor.fetchone()
+    if not pv_row:
+        conn.close()
+        raise HTTPException(status_code=404, detail=f"Planned video '{pv_id}' not found.")
+
     raw_input = None
     if payload:
         raw_input = payload.youtube_url or payload.video_id
@@ -1615,6 +1624,7 @@ def link_video(pv_id: str, payload: Optional[LinkVideoPayload] = None):
         v_row = cursor.fetchone()
 
         if not v_row:
+            inserted_from_api = False
             api_key = yt_client.get_setting("youtube_api_key")
             if api_key:
                 try:
@@ -1647,28 +1657,67 @@ def link_video(pv_id: str, payload: Optional[LinkVideoPayload] = None):
                             v_views, v_likes, v_comments, v_views * 15, int(dur_sec * 0.4),
                             round((v_views * int(dur_sec * 0.4)) / 3600.0, 1), int(v_views * 0.016), now_str
                         ))
+                        inserted_from_api = True
                 except Exception as e:
                     print("Error fetching video details from YouTube API:", e)
 
+            # Ensure baseline video record exists so cards & lists never render blank
+            if not inserted_from_api:
+                cursor.execute("""
+                    INSERT OR IGNORE INTO videos (
+                        id, title, description, thumbnail_url, published_at,
+                        duration_seconds, course, topic, format, category_override,
+                        views, likes, comments, impressions, ctr, avg_view_duration,
+                        watch_time_hours, subscribers_gained, updated_at
+                    ) VALUES (?, ?, '', ?, ?, 0, 'General Prep', 'General / Strategy', 'Core Lecture', 0, 0, 0, 0, 0, 5.0, 0, 0.0, 0, ?)
+                """, (
+                    extracted_id,
+                    f"YouTube Video ({extracted_id})",
+                    f"https://img.youtube.com/vi/{extracted_id}/hqdefault.jpg",
+                    now_str,
+                    now_str
+                ))
+
         cursor.execute("""
             UPDATE planned_videos 
-            SET linked_video_id = ?, status = 'Uploaded', updated_at = ?
+            SET linked_video_id = ?, status = 'Uploaded', production_stage = 'Uploaded', updated_at = ?
             WHERE id = ?
         """, (extracted_id, now_str, pv_id))
+
+        # Auto-sync to list_videos (Topic, Subject, Course) so syllabus grid reflects covered status
+        cursor.execute("SELECT list_id FROM planned_video_lists WHERE planned_video_id = ?", (pv_id,))
+        for r in cursor.fetchall():
+            cursor.execute("""
+                INSERT OR IGNORE INTO list_videos (list_id, video_id, auto_assigned, created_at)
+                VALUES (?, ?, 0, ?)
+            """, (r["list_id"], extracted_id, now_str))
 
         cursor.execute("SELECT id, title, views, likes, comments, thumbnail_url, published_at FROM videos WHERE id = ?", (extracted_id,))
         final_row = cursor.fetchone()
         linked_video_info = dict(final_row) if final_row else {"id": extracted_id, "title": "YouTube Video"}
     else:
+        old_linked_id = pv_row["linked_video_id"]
         cursor.execute("""
             UPDATE planned_videos 
             SET linked_video_id = NULL, status = 'Planned', updated_at = ?
             WHERE id = ?
         """, (now_str, pv_id))
 
+        if old_linked_id:
+            cursor.execute("SELECT list_id FROM planned_video_lists WHERE planned_video_id = ?", (pv_id,))
+            for r in cursor.fetchall():
+                cursor.execute("DELETE FROM list_videos WHERE list_id = ? AND video_id = ? AND auto_assigned = 0", (r["list_id"], old_linked_id))
+
     cursor.execute("DELETE FROM match_review_queue WHERE planned_video_id = ?", (pv_id,))
     conn.commit()
     conn.close()
+
+    try:
+        run_auto_matching()
+        run_topic_video_matching()
+    except Exception as _e:
+        print(f"Auto-matcher notice after linking: {_e}")
+
     return {"status": "success", "linked_video_id": extracted_id, "linked_video": linked_video_info}
 
 @app.get("/api/planner/review-queue")
@@ -1732,7 +1781,9 @@ def reject_match(queue_id: int):
 
 @app.post("/api/planner/auto-match")
 def trigger_auto_match():
-    return run_auto_matching()
+    r1 = run_auto_matching()
+    r2 = run_topic_video_matching()
+    return {"status": "success", "planner": r1, "syllabus": r2}
 
 
 # -------------------------------------------------------------
@@ -1822,6 +1873,10 @@ def run_matcher_endpoint():
 
 @app.get("/api/syllabus/match-queue")
 def get_match_queue_endpoint():
+    try:
+        run_topic_video_matching()
+    except Exception as _e:
+        print(f"Topic match queue refresh notice: {_e}")
     return get_topic_match_queue()
 
 @app.post("/api/syllabus/match-queue/{queue_id}/confirm")

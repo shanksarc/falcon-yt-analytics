@@ -74,6 +74,22 @@ export default function App() {
       const res = await fetch('/api/status');
       const data = await res.json();
       setStatus(data);
+
+      // Auto-sync for newly published YouTube videos if API key is configured
+      const lastSyncTime = data.last_youtube_sync ? new Date(data.last_youtube_sync).getTime() : 0;
+      const twentyMinsAgo = Date.now() - (20 * 60 * 1000);
+      const sessionSynced = sessionStorage.getItem('falcon_auto_sync_checked');
+      if (data.has_api_key && (!lastSyncTime || lastSyncTime < twentyMinsAgo) && !sessionSynced) {
+        sessionStorage.setItem('falcon_auto_sync_checked', 'true');
+        fetch('/api/youtube/sync', { method: 'POST' })
+          .then(r => r.json())
+          .then(syncRes => {
+            if (syncRes.status === 'success') {
+              setRefreshKey(prev => prev + 1);
+            }
+          })
+          .catch(e => console.debug("Background YouTube sync notice:", e));
+      }
     } catch (err) {
       console.error("Failed to load status:", err);
     }
@@ -107,9 +123,14 @@ export default function App() {
       const res = await fetch('/api/youtube/sync', { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
+        const pCount = data.planner_matching?.review_queue_added || 0;
+        const sCount = data.syllabus_matching?.queued_for_review || 0;
+        const matchInfo = (pCount > 0 || sCount > 0)
+          ? ` • Auto-match found ${pCount} planner / ${sCount} syllabus candidates`
+          : ' • Auto-matchers ran successfully';
         setSyncToast({
           type: 'success',
-          msg: `Synced ${data.total_videos_synced} videos (${data.total_channel_views?.toLocaleString()} views) from ${data.channel_title}`
+          msg: `Synced ${data.total_videos_synced} videos (${data.total_channel_views?.toLocaleString()} views) from ${data.channel_title}${matchInfo}`
         });
         setRefreshKey(prev => prev + 1);
         setTimeout(() => setSyncToast(null), 6000);

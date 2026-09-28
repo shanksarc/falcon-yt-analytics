@@ -7,6 +7,7 @@ import {
   Table as TableIcon, LayoutGrid, ArrowUpDown, X
 } from 'lucide-react';
 import TargetManagementModal from './TargetManagementModal';
+import LinkYouTubeModal from './LinkYouTubeModal';
 
 function StatusIcon({ status, color, size = 13 }) {
   if (status === 'TARGET_MET' || status === 'ON_TRACK') {
@@ -238,6 +239,7 @@ export default function ProgressSection({ initialSessionId = null }) {
   const [videoSearchQuery, setVideoSearchQuery] = useState('');
   const [videoCurrentPage, setVideoCurrentPage] = useState(1);
   const [updatingVideoId, setUpdatingVideoId] = useState(null);
+  const [linkingPlannedVideo, setLinkingPlannedVideo] = useState(null);
   const videoPageSize = 5;
 
   useEffect(() => {
@@ -748,24 +750,22 @@ export default function ProgressSection({ initialSessionId = null }) {
           {/* Bottom Half: Stat Boxes (LABELS OUTSIDE, NUMBERS IN BOX) */}
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: overdue > 0 ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)', 
+            gridTemplateColumns: 'repeat(5, 1fr)', 
             gap: '0.75rem',
             width: '100%'
           }}>
-            {/* 1. Target Count */}
+            {/* 1. Target */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
               <span style={{ 
-                fontSize: '0.72rem', 
+                fontSize: '0.78rem', 
                 fontWeight: 600, 
-                color: 'var(--text-muted)', 
-                textTransform: 'uppercase', 
-                letterSpacing: '0.5px',
+                color: 'var(--text-secondary)', 
                 textAlign: 'center',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
               }}>
-                Target Count
+                Target
               </span>
               <div style={{ 
                 background: 'var(--bg-surface-elevated)', 
@@ -779,7 +779,7 @@ export default function ProgressSection({ initialSessionId = null }) {
                 boxShadow: '0 2px 5px rgba(0,0,0,0.12)'
               }}>
                 <span style={{ 
-                  fontSize: '2rem', 
+                  fontSize: '1.9rem', 
                   fontWeight: 800, 
                   fontFamily: 'var(--font-sans)', 
                   color: 'var(--text-primary)',
@@ -790,20 +790,18 @@ export default function ProgressSection({ initialSessionId = null }) {
               </div>
             </div>
 
-            {/* 2. Total Planned */}
+            {/* 2. Planned */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
               <span style={{ 
-                fontSize: '0.72rem', 
+                fontSize: '0.78rem', 
                 fontWeight: 600, 
-                color: 'var(--text-muted)', 
-                textTransform: 'uppercase', 
-                letterSpacing: '0.5px',
+                color: 'var(--text-secondary)', 
                 textAlign: 'center',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
               }}>
-                Total Planned
+                Planned
               </span>
               <div style={{ 
                 background: 'var(--bg-surface-elevated)', 
@@ -817,7 +815,7 @@ export default function ProgressSection({ initialSessionId = null }) {
                 boxShadow: '0 2px 5px rgba(0,0,0,0.12)'
               }}>
                 <span style={{ 
-                  fontSize: '2rem', 
+                  fontSize: '1.9rem', 
                   fontWeight: 800, 
                   fontFamily: 'var(--font-sans)', 
                   color: 'var(--text-primary)',
@@ -831,11 +829,9 @@ export default function ProgressSection({ initialSessionId = null }) {
             {/* 3. Uploaded */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
               <span style={{ 
-                fontSize: '0.72rem', 
+                fontSize: '0.78rem', 
                 fontWeight: 600, 
-                color: 'var(--text-muted)', 
-                textTransform: 'uppercase', 
-                letterSpacing: '0.5px',
+                color: 'var(--text-secondary)', 
                 textAlign: 'center',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -855,7 +851,7 @@ export default function ProgressSection({ initialSessionId = null }) {
                 boxShadow: '0 2px 5px rgba(0,0,0,0.12)'
               }}>
                 <span style={{ 
-                  fontSize: '2rem', 
+                  fontSize: '1.9rem', 
                   fontWeight: 800, 
                   fontFamily: 'var(--font-sans)', 
                   color: '#3EA65E',
@@ -869,11 +865,9 @@ export default function ProgressSection({ initialSessionId = null }) {
             {/* 4. Scheduled */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
               <span style={{ 
-                fontSize: '0.72rem', 
+                fontSize: '0.78rem', 
                 fontWeight: 600, 
-                color: 'var(--text-muted)', 
-                textTransform: 'uppercase', 
-                letterSpacing: '0.5px',
+                color: 'var(--text-secondary)', 
                 textAlign: 'center',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -893,7 +887,7 @@ export default function ProgressSection({ initialSessionId = null }) {
                 boxShadow: '0 2px 5px rgba(0,0,0,0.12)'
               }}>
                 <span style={{ 
-                  fontSize: '2rem', 
+                  fontSize: '1.9rem', 
                   fontWeight: 800, 
                   fontFamily: 'var(--font-sans)', 
                   color: '#3B82F6',
@@ -904,44 +898,41 @@ export default function ProgressSection({ initialSessionId = null }) {
               </div>
             </div>
 
-            {/* Optional 5. Overdue */}
-            {overdue > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
+            {/* 5. Overdue (Always visible for consistent layout across all courses) */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
+              <span style={{ 
+                fontSize: '0.78rem', 
+                fontWeight: 600, 
+                color: overdue > 0 ? '#DC2626' : 'var(--text-secondary)', 
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}>
+                Overdue
+              </span>
+              <div style={{ 
+                background: overdue > 0 ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-surface-elevated)', 
+                border: overdue > 0 ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid var(--border-subtle)', 
+                borderRadius: 'var(--radius-md)', 
+                width: '100%', 
+                padding: '0.55rem 0.25rem', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.12)'
+              }}>
                 <span style={{ 
-                  fontSize: '0.72rem', 
-                  fontWeight: 600, 
-                  color: '#FF0000', 
-                  textTransform: 'uppercase', 
-                  letterSpacing: '0.5px',
-                  textAlign: 'center',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis'
+                  fontSize: '1.9rem', 
+                  fontWeight: 800, 
+                  fontFamily: 'var(--font-sans)', 
+                  color: overdue > 0 ? '#DC2626' : 'var(--text-secondary)',
+                  lineHeight: 1 
                 }}>
-                  Overdue
+                  {overdue}
                 </span>
-                <div style={{ 
-                  background: 'rgba(255, 0, 0, 0.08)', 
-                  border: '1px solid rgba(255, 0, 0, 0.35)', 
-                  borderRadius: 'var(--radius-md)', 
-                  width: '100%', 
-                  padding: '0.55rem 0.25rem', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center'
-                }}>
-                  <span style={{ 
-                    fontSize: '2rem', 
-                    fontWeight: 800, 
-                    fontFamily: 'var(--font-sans)', 
-                    color: '#FF0000',
-                    lineHeight: 1 
-                  }}>
-                    {overdue}
-                  </span>
-                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -1002,8 +993,8 @@ export default function ProgressSection({ initialSessionId = null }) {
           }}>
             {/* Views */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                <Eye size={12} color="#3B82F6" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                <Eye size={13} color="#3B82F6" />
                 <span>Views</span>
               </div>
               <div style={{ 
@@ -1016,7 +1007,7 @@ export default function ProgressSection({ initialSessionId = null }) {
                 <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#3B82F6', lineHeight: 1 }}>
                   {formatCompactNum(youtube_stats?.total_views || 0)}
                 </div>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
                   {(youtube_stats?.total_views || 0).toLocaleString()} total
                 </div>
               </div>
@@ -1024,8 +1015,8 @@ export default function ProgressSection({ initialSessionId = null }) {
 
             {/* Watch Time Hours */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                <Clock size={12} color="#3EA65E" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                <Clock size={13} color="#3EA65E" />
                 <span>Watch Time</span>
               </div>
               <div style={{ 
@@ -1038,7 +1029,7 @@ export default function ProgressSection({ initialSessionId = null }) {
                 <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#3EA65E', lineHeight: 1 }}>
                   {formatCompactNum(youtube_stats?.total_watch_time_hours || 0)}
                 </div>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
                   {(youtube_stats?.total_watch_time_hours || 0).toLocaleString()} hrs
                 </div>
               </div>
@@ -1046,8 +1037,8 @@ export default function ProgressSection({ initialSessionId = null }) {
 
             {/* Likes */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                <ThumbsUp size={12} color="#E8A33D" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                <ThumbsUp size={13} color="#E8A33D" />
                 <span>Likes</span>
               </div>
               <div style={{ 
@@ -1060,7 +1051,7 @@ export default function ProgressSection({ initialSessionId = null }) {
                 <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
                   {(youtube_stats?.total_likes || 0).toLocaleString()}
                 </div>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
                   Total likes
                 </div>
               </div>
@@ -1068,8 +1059,8 @@ export default function ProgressSection({ initialSessionId = null }) {
 
             {/* Comments */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                <MessageSquare size={12} color="#A855F7" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                <MessageSquare size={13} color="#A855F7" />
                 <span>Comments</span>
               </div>
               <div style={{ 
@@ -1082,7 +1073,7 @@ export default function ProgressSection({ initialSessionId = null }) {
                 <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
                   {(youtube_stats?.total_comments || 0).toLocaleString()}
                 </div>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
                   Total comments
                 </div>
               </div>
@@ -1609,11 +1600,11 @@ export default function ProgressSection({ initialSessionId = null }) {
                       {v.status || 'Planned'}
                     </span>
 
-                    {/* Quick Mark Uploaded Action */}
+                    {/* Quick Mark Uploaded Action -> Opens LinkYouTubeModal */}
                     <button
                       type="button"
                       disabled={isUpdating}
-                      onClick={() => handleMarkUploaded(v.id)}
+                      onClick={() => setLinkingPlannedVideo(v)}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -3161,6 +3152,18 @@ export default function ProgressSection({ initialSessionId = null }) {
           onClose={() => setShowTargetModal(false)}
           onSuccess={() => {
             setShowTargetModal(false);
+            fetchAnalytics(activeCourseId, activeSessionId);
+          }}
+        />
+      )}
+
+      {/* Manual YouTube Link & Mark Uploaded Modal */}
+      {linkingPlannedVideo && (
+        <LinkYouTubeModal
+          plannedVideo={linkingPlannedVideo}
+          onClose={() => setLinkingPlannedVideo(null)}
+          onSuccess={() => {
+            setLinkingPlannedVideo(null);
             fetchAnalytics(activeCourseId, activeSessionId);
           }}
         />
