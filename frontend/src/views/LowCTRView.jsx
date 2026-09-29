@@ -38,14 +38,16 @@ export default function LowCTRView({ onLogChangeForVideo, onEditCategoryForVideo
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#1E293B', letterSpacing: '-0.01em' }}>Low-CTR Detection & Triage</h2>
+            <h2 
+              style={{ fontSize: '1.15rem', fontWeight: 700, color: '#1E293B', letterSpacing: '-0.01em' }}
+              title="Surfaces videos where CTR is significantly below category baselines."
+            >
+              Low-CTR Detection & Triage
+            </h2>
             {flaggedCount > 0 && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 10px', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: 500, background: '#FFF0F2', color: '#E11D48', border: '1px solid rgba(225, 29, 72, 0.2)' }}>{flaggedCount} underperforming</span>
             )}
           </div>
-          <p style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '4px' }}>
-            Surfaces videos where CTR is significantly below category baselines.
-          </p>
         </div>
 
         <div className="controls-bar">

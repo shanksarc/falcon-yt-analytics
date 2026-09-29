@@ -892,13 +892,10 @@ export default function ProgressSection({ initialSessionId = null, onNavigateToV
         {/* Card 1: Status Breakdown (Moved up from bottom) */}
         <div className="overview-block-card" style={{ padding: '1.25rem', background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div style={{ marginBottom: '0.75rem' }}>
-            <h4 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)' }}>
+            <h4 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)' }} title="Planned backlog, scheduled, uploaded, overdue">
               <PieChart size={15} color="var(--text-secondary)" />
               <span>Status Breakdown</span>
             </h4>
-            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-              Planned backlog, scheduled, uploaded, overdue.
-            </p>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', gap: '1rem', flexWrap: 'wrap', flex: 1, padding: '0.5rem 0' }}>
@@ -951,13 +948,10 @@ export default function ProgressSection({ initialSessionId = null, onNavigateToV
         <div className="overview-block-card" style={{ padding: '1.25rem', background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
             <div>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)' }} title="Ideal pace vs actual uploads">
                 <TrendingUp size={15} color={statusColor} />
                 <span>Burnup Pace</span>
               </h4>
-              <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-                Ideal pace vs actual uploads.
-              </p>
             </div>
             <div style={{ display: 'flex', gap: '0.6rem', fontSize: '0.68rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -1029,13 +1023,10 @@ export default function ProgressSection({ initialSessionId = null, onNavigateToV
         <div className="overview-block-card" style={{ padding: '1.25rem', background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
             <div>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)' }} title="Uploads per week (Past 8 weeks)">
                 <BarChart2 size={15} color="#3EA65E" />
                 <span>Weekly Velocity</span>
               </h4>
-              <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-                Uploads per week (Past 8 weeks)
-              </p>
             </div>
             <div style={{ 
               display: 'flex', 
@@ -1138,13 +1129,10 @@ export default function ProgressSection({ initialSessionId = null, onNavigateToV
             {/* Header with Title and View Switcher */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', borderBottom: '1px solid var(--border-hairline)', paddingBottom: '0.85rem' }}>
               <div>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-primary)' }} title="Channel-level pacing across certification tracks. Click any course to view subject-wise outline.">
                   <BookOpen size={18} color="#3B82F6" />
                   <span>Course Breakdown</span>
                 </h3>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '3px 0 0' }}>
-                  Channel-level pacing across certification tracks. Click any course to view subject-wise outline.
-                </p>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

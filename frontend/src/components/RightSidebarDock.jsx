@@ -17,7 +17,14 @@ import {
   Flame,
   ArrowUpRight,
   ExternalLink,
-  Calendar
+  Calendar,
+  BookOpen,
+  Zap,
+  BarChart3,
+  Users2,
+  AlertCircle,
+  LayoutDashboard,
+  CalendarDays
 } from 'lucide-react';
 import { getVideoTrackInfo } from './FullVideoListView';
 
@@ -29,17 +36,10 @@ function formatCompactNum(num) {
 }
 
 /**
- * RightSidebarDock - Static & Dynamic Split Architecture
- * 
- * - TOP SECTION (Static):
- *   1. YouTube Impact Tracker (Fix 4)
- *   2. Planned Videos Queue (Fix 1: Urgent Priority + Upcoming Week 4 Videos)
- *   3. Channel Status
- * 
- * - LOWER SECTION (Dynamic):
- *   Contextual Inspector / Dynamic Module Workspace (Fix 3 & user instructions)
+ * RightSidebarDock - Static & Page-Contextual Split Architecture
  */
 export default function RightSidebarDock({
+  activeTab = 'planner',
   status,
   selectedItem,
   onClearSelectedItem,
@@ -735,13 +735,38 @@ export default function RightSidebarDock({
           boxSizing: 'border-box'
         }}
       >
-        {/* Dynamic Area Section Header */}
+        {/* Contextual Section Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <SlidersHorizontal size={13} color="#2F65F6" />
-            <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#475569' }}>
-              Dynamic Area
-            </span>
+            {selectedItem ? (
+              <>
+                <FileText size={13} color="#2F65F6" />
+                <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#475569' }}>
+                  Item Inspector
+                </span>
+              </>
+            ) : (
+              <>
+                {activeTab === 'syllabus' && <BookOpen size={13} color="#7C3AED" />}
+                {activeTab === 'planner' && <CalendarDays size={13} color="#2F65F6" />}
+                {activeTab === 'shorts' && <Zap size={13} color="#EA580C" />}
+                {activeTab === 'manage' && <SlidersHorizontal size={13} color="#7C3AED" />}
+                {activeTab === 'overview' && <LayoutDashboard size={13} color="#2F65F6" />}
+                {activeTab === 'leaderboard' && <BarChart3 size={13} color="#10B981" />}
+                {activeTab === 'low-ctr' && <AlertCircle size={13} color="#EF4444" />}
+                {activeTab === 'competitors' && <Users2 size={13} color="#6366F1" />}
+                <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#475569' }}>
+                  {activeTab === 'syllabus' && 'Syllabus Matcher'}
+                  {activeTab === 'planner' && 'Upload Planner'}
+                  {activeTab === 'shorts' && 'Shorts Pipeline'}
+                  {activeTab === 'manage' && 'Plan Management'}
+                  {activeTab === 'overview' && 'Channel Overview'}
+                  {activeTab === 'leaderboard' && 'Leaderboard'}
+                  {activeTab === 'low-ctr' && 'CTR Triage'}
+                  {activeTab === 'competitors' && 'Competitor Intel'}
+                </span>
+              </>
+            )}
           </div>
           {selectedItem && (
             <button
@@ -778,7 +803,7 @@ export default function RightSidebarDock({
               gap: '12px'
             }}
           >
-            {/* Header Badge & Urgent Button (Fix 2) */}
+            {/* Header Badge & Urgent Button */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span
                 style={{
@@ -795,7 +820,7 @@ export default function RightSidebarDock({
                 {selectedItem.item_type || (selectedItem.formats ? 'Syllabus Topic' : 'Planned Video')}
               </span>
 
-              {/* Urgency Toggle Button in Inspector (Fix 2) */}
+              {/* Urgency Toggle Button in Inspector */}
               <button
                 type="button"
                 onClick={() => handleToggleUrgent(selectedItem)}
@@ -956,44 +981,191 @@ export default function RightSidebarDock({
             )}
           </div>
         ) : (
-          /* Placeholder State awaiting instructions */
+          /* Page-Specific Contextual Card (Fix 1) */
           <div
             className="soft-raised"
             style={{
-              padding: '24px 16px',
+              padding: '14px',
               borderRadius: '16px',
               background: '#F0F3F7',
-              border: '1px dashed rgba(166, 175, 195, 0.6)',
+              border: '1px solid rgba(255, 255, 255, 0.85)',
+              boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.85)',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
               gap: '10px'
             }}
           >
-            <div
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '10px',
-                background: '#E6EAF0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#64748B'
-              }}
-            >
-              <Layers size={18} />
-            </div>
-            <div>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-                Dynamic Workspace
-              </div>
-              <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '3px', lineHeight: 1.4 }}>
-                Select an item in Upload Planner or Syllabus Matcher to inspect details, or awaiting dynamic instructions.
-              </div>
-            </div>
+            {activeTab === 'syllabus' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>Curriculum Coverage</span>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#7C3AED', background: 'rgba(124, 58, 237, 0.1)', padding: '2px 7px', borderRadius: '9999px' }}>
+                    Matrix Mode
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Formats</div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#7C3AED', marginTop: '2px' }}>4 Types</div>
+                  </div>
+                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Coverage</div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#10B981', marginTop: '2px' }}>Active</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: '10px', color: '#64748B', lineHeight: 1.35, borderTop: '1px solid rgba(166, 175, 195, 0.25)', paddingTop: '8px' }}>
+                  Click any reading cell in the matrix to view linked YouTube videos or plan missing formats.
+                </div>
+              </>
+            )}
+
+            {activeTab === 'planner' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>Upload Milestones</span>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#2F65F6', background: 'rgba(47, 101, 246, 0.1)', padding: '2px 7px', borderRadius: '9999px' }}>
+                    Pacing OK
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Cadence</div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#2F65F6', marginTop: '2px' }}>Weekly</div>
+                  </div>
+                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Target Mode</div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#059669', marginTop: '2px' }}>Exam Run</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: '10px', color: '#64748B', lineHeight: 1.35, borderTop: '1px solid rgba(166, 175, 195, 0.25)', paddingTop: '8px' }}>
+                  Click any planned video in Full Video List or Weekly Schedule to inspect details or assign YouTube links.
+                </div>
+              </>
+            )}
+
+            {activeTab === 'shorts' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>Shorts Pipeline</span>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#EA580C', background: 'rgba(234, 88, 12, 0.1)', padding: '2px 7px', borderRadius: '9999px' }}>
+                    60s Bites
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Focus</div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#EA580C', marginTop: '2px' }}>TI BA II+</div>
+                  </div>
+                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Series</div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#475569', marginTop: '2px' }}>Hacks</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: '10px', color: '#64748B', lineHeight: 1.35, borderTop: '1px solid rgba(166, 175, 195, 0.25)', paddingTop: '8px' }}>
+                  Vertical shorts under 60 seconds with formula and calculator hacks drive top subscriber discovery.
+                </div>
+              </>
+            )}
+
+            {activeTab === 'manage' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>Curriculum Setup</span>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#7C3AED', background: 'rgba(124, 58, 237, 0.1)', padding: '2px 7px', borderRadius: '9999px' }}>
+                    Structure
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Tracks</div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#7C3AED', marginTop: '2px' }}>CFA & FRM</div>
+                  </div>
+                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Windows</div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#10B981', marginTop: '2px' }}>Active</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: '10px', color: '#64748B', lineHeight: 1.35, borderTop: '1px solid rgba(166, 175, 195, 0.25)', paddingTop: '8px' }}>
+                  Configure course subjects, set exam session targets, and reconcile automatic video matches.
+                </div>
+              </>
+            )}
+
+            {activeTab === 'overview' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>Channel Health</span>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#10B981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 7px', borderRadius: '9999px' }}>
+                    Healthy
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Retention</div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#2F65F6', marginTop: '2px' }}>Strong</div>
+                  </div>
+                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>YoY Trend</div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#10B981', marginTop: '2px' }}>Positive</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: '10px', color: '#64748B', lineHeight: 1.35, borderTop: '1px solid rgba(166, 175, 195, 0.25)', paddingTop: '8px' }}>
+                  Click any course performance block in the overview to drill into subject-level telemetry.
+                </div>
+              </>
+            )}
+
+            {activeTab === 'low-ctr' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>CTR Interventions</span>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#EF4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 7px', borderRadius: '9999px' }}>
+                    Action Required
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Threshold</div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#EF4444', marginTop: '2px' }}>&lt; 4.0%</div>
+                  </div>
+                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Goal</div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#10B981', marginTop: '2px' }}>&gt; 6.0%</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: '10px', color: '#64748B', lineHeight: 1.35, borderTop: '1px solid rgba(166, 175, 195, 0.25)', paddingTop: '8px' }}>
+                  Audit thumbnails and titles for videos below the 4% CTR benchmark to recover view velocity.
+                </div>
+              </>
+            )}
+
+            {activeTab === 'leaderboard' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>Rankings</span>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#10B981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 7px', borderRadius: '9999px' }}>
+                    Monthly
+                  </span>
+                </div>
+                <div style={{ fontSize: '10px', color: '#64748B', lineHeight: 1.35 }}>
+                  Videos ranked by current calendar month watch time, views, and viewer acquisition.
+                </div>
+              </>
+            )}
+
+            {activeTab === 'competitors' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>Benchmark</span>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#6366F1', background: 'rgba(99, 102, 241, 0.1)', padding: '2px 7px', borderRadius: '9999px' }}>
+                    Tracked
+                  </span>
+                </div>
+                <div style={{ fontSize: '10px', color: '#64748B', lineHeight: 1.35 }}>
+                  Comparative growth and upload pace relative to finance education peer channels.
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

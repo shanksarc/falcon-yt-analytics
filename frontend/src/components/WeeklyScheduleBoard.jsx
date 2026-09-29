@@ -411,14 +411,14 @@ export default function WeeklyScheduleBoard({
         gap: '0.75rem' 
       }}>
         <div>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
-            Upload Schedule Board
-          </h3>
-          <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-            {scheduleTier === '12month' 
+          <h3 
+            style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}
+            title={scheduleTier === '12month' 
               ? 'Coarse planning: Drag videos from backlog into target months. Click any month box to distribute into weeks.' 
               : 'Near-term precision: Allocate videos into the rolling 4-week window. Overdue items roll over automatically.'}
-          </p>
+          >
+            Upload Schedule Board
+          </h3>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -901,12 +901,13 @@ export default function WeeklyScheduleBoard({
                   <Calendar size={18} color="#3EA65E" />
                 </div>
                 <div>
-                  <h3 className="modal-title" style={{ fontSize: '1.1rem' }}>
+                  <h3 
+                    className="modal-title" 
+                    style={{ fontSize: '1.1rem' }}
+                    title="Distribute videos from the month-level pool into specific weeks. Unassigned videos stay at the month level."
+                  >
                     {focusedMonth.name} Schedule Breakdown
                   </h3>
-                  <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', margin: 0 }}>
-                    Distribute videos from the month-level pool into specific weeks. Unassigned videos stay at the month level.
-                  </p>
                 </div>
               </div>
               <button className="btn-ghost" onClick={() => setFocusedMonth(null)} style={{ padding: '4px' }}>

@@ -903,13 +903,12 @@ export default function SyllabusMatcherView({ onSelectItem, selectedItem }) {
             padding: '2px 8px',
             borderRadius: '9999px',
             border: '1px solid rgba(124, 58, 237, 0.2)'
-          }}>
+          }}
+            title="Reconcile curriculum topics with YouTube videos across Discussion, Questions, Revision, and General formats."
+          >
             Topic × Video Coverage Matrix
           </span>
         </div>
-        <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
-          Reconcile curriculum topics with YouTube videos across Discussion, Questions, Revision, and General formats.
-        </p>
       </div>
 
       {/* 2. GLOBAL ACTIONS BAR (DEDICATED BAR INSTEAD OF CARD) */}

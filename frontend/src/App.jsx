@@ -8,6 +8,8 @@ import LowCTRView from './views/LowCTRView';
 import ChangeLogView from './views/ChangeLogView';
 import CompetitorsView from './views/CompetitorsView';
 import UploadPlannerView from './views/UploadPlannerView';
+import ShortsPlannerView from './views/ShortsPlannerView';
+import ManagePlanView from './views/ManagePlanView';
 import SyllabusMatcherView from './views/SyllabusMatcherView';
 
 import ChangeLogModal from './components/ChangeLogModal';
@@ -267,6 +269,24 @@ export default function App() {
               />
             )}
 
+            {/* Tab 2.2: Shorts Planner (Shifted from Upload Planner per Fix 3) */}
+            {activeTab === 'shorts' && (
+              <ShortsPlannerView
+                key={`shorts-${refreshKey}`}
+                onSelectItem={setSelectedInspectorItem}
+                selectedItem={selectedInspectorItem}
+              />
+            )}
+
+            {/* Tab 2.4: Manage Plan (Shifted from Upload Planner per Fix 2) */}
+            {activeTab === 'manage' && (
+              <ManagePlanView
+                key={`manage-${refreshKey}`}
+                onSelectItem={setSelectedInspectorItem}
+                selectedItem={selectedInspectorItem}
+              />
+            )}
+
             {/* Tab 2.5: Syllabus Matcher */}
             {activeTab === 'syllabus' && (
               <SyllabusMatcherView
@@ -316,6 +336,7 @@ export default function App() {
 
       {/* 3. RIGHT DOCK (w-80 / 320px) — Static & Contextual Rail */}
       <RightSidebarDock
+        activeTab={activeTab}
         status={status}
         onSyncChannel={handleSyncChannel}
         isSyncing={isSyncing}

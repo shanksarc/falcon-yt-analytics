@@ -43,10 +43,12 @@ export default function CompetitorsView({ onOpenAddCompetitor }) {
       <div style={{ background: '#F0F3F7', border: '1px solid rgba(255, 255, 255, 0.6)', borderRadius: '22px', boxShadow: '6px 6px 14px rgba(166, 175, 195, 0.55), -6px -6px 14px rgba(255, 255, 255, 0.85)', padding: '24px', marginBottom: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#1E293B', letterSpacing: '-0.01em' }}>Niche Competitor Benchmarking</h2>
-            <p style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '4px' }}>
-              Normalized public benchmarks (Views/Day velocity and Channel Outlier multiplier).
-            </p>
+            <h2 
+              style={{ fontSize: '1.15rem', fontWeight: 700, color: '#1E293B', letterSpacing: '-0.01em' }}
+              title="Normalized public benchmarks (Views/Day velocity and Channel Outlier multiplier)."
+            >
+              Niche Competitor Benchmarking
+            </h2>
           </div>
 
           <button 

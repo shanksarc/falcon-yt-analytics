@@ -2,6 +2,8 @@ import React from 'react';
 import {
   LayoutDashboard,
   CalendarDays,
+  Zap,
+  SlidersHorizontal,
   BookOpen,
   BarChart3,
   AlertCircle,
@@ -14,6 +16,8 @@ import {
 const navItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'planner', label: 'Upload Planner', icon: CalendarDays },
+  { id: 'shorts', label: 'Shorts Planner', icon: Zap },
+  { id: 'manage', label: 'Manage Plan', icon: SlidersHorizontal },
   { id: 'syllabus', label: 'Syllabus Matcher', icon: BookOpen },
   { id: 'leaderboard', label: 'Monthly Leaderboard', icon: BarChart3 },
   { id: 'low-ctr', label: 'Low-CTR Triage', icon: AlertCircle, hasBadge: true },
