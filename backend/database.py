@@ -233,6 +233,8 @@ def init_db():
     # Check for format column in planned_videos
     if "format" not in pv_cols:
         cursor.execute("ALTER TABLE planned_videos ADD COLUMN format TEXT DEFAULT ''")
+    if "is_urgent" not in pv_cols:
+        cursor.execute("ALTER TABLE planned_videos ADD COLUMN is_urgent INTEGER DEFAULT 0")
 
     # Check for total_target and shorts_target columns in sessions
     cursor.execute("PRAGMA table_info(sessions)")

@@ -105,32 +105,6 @@ export default function TopHeader({
         {/* Desktop App Install Button */}
         <InstallDesktopAppButton />
 
-        <button
-          onClick={onSyncChannel}
-          disabled={isSyncing}
-          id="topheader-btn-sync"
-          title="Sync latest YouTube channel analytics"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '7px 16px',
-            background: '#F0F3F7',
-            border: '1px solid rgba(255, 255, 255, 0.8)',
-            borderRadius: '9999px',
-            fontSize: '13px',
-            fontWeight: 600,
-            color: '#1E293B',
-            cursor: isSyncing ? 'not-allowed' : 'pointer',
-            opacity: isSyncing ? 0.6 : 1,
-            boxShadow: '3px 3px 8px rgba(166, 175, 195, 0.4), -3px -3px 8px rgba(255, 255, 255, 0.85)',
-            transition: 'all 0.15s ease',
-            fontFamily: 'inherit',
-          }}
-        >
-          <RefreshCw size={13} style={{ color: '#2F65F6' }} className={isSyncing ? 'animate-spin' : ''} />
-          <span>{isSyncing ? 'Syncing...' : 'Sync Channel'}</span>
-        </button>
 
         {/* Notification Bell */}
         <button

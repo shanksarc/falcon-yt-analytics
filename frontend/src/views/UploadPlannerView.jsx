@@ -1277,7 +1277,7 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
       {activeViewTab === 'progress' && (
         <div>
           {/* Progress Section: Dial, Burnup, Velocity, Donut, Course Grid & Drill-down */}
-          <ProgressSection />
+          <ProgressSection onNavigateToVideos={() => setActiveViewTab('videos')} />
         </div>
       )}
 

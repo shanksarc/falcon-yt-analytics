@@ -322,6 +322,7 @@ export default function App() {
         selectedItem={selectedInspectorItem}
         onClearSelectedItem={() => setSelectedInspectorItem(null)}
         onUpdateItemStatus={handleUpdateInspectorItemStatus}
+        onSelectItem={(item) => setSelectedInspectorItem(item)}
         onOpenLinkModal={(item) => {
           setActiveTab('planner');
         }}

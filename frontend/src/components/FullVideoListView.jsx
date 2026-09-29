@@ -3,8 +3,186 @@ import {
   Search, Filter, Check, X, Link2, ExternalLink, Calendar, Plus,
   Trash2, Edit3, Eye, ThumbsUp, ChevronDown, CheckSquare, Square,
   UploadCloud, ArrowUpDown, Layers, Zap, Clock, AlertCircle, RefreshCw,
-  Video, CheckCircle2, TrendingUp, BarChart2
+  Video, CheckCircle2, TrendingUp, BarChart2, Flame
 } from 'lucide-react';
+
+// Subject Abbreviations Dictionary (Fix 2: CFA & FRM Short Form Standard)
+const SUBJECT_ABBR_MAP = {
+  // CFA Subjects
+  'quantitative methods': 'QM',
+  'quantitative management': 'QM',
+  'quantitative analysis': 'QA',
+  'economics': 'ECO',
+  'financial statement analysis': 'FSA',
+  'financial reporting': 'FSA',
+  'corporate issuers': 'CI',
+  'corporate finance': 'CI',
+  'ethical & professional standards': 'ETH',
+  'ethical and professional standards': 'ETH',
+  'ethics': 'ETH',
+  'equity investments': 'EQ',
+  'equity': 'EQ',
+  'fixed income': 'FI',
+  'derivatives': 'DER',
+  'alternative investments': 'AI',
+  'portfolio management': 'PM',
+  'wealth planning': 'WP',
+
+  // FRM Subjects
+  'foundations of risk': 'FR',
+  'foundations of risk management': 'FR',
+  'financial markets & products': 'FMP',
+  'financial markets and products': 'FMP',
+  'valuation & risk models': 'VRM',
+  'valuation and risk models': 'VRM',
+  'market risk': 'MR',
+  'market risk measurement': 'MR',
+  'credit risk': 'CR',
+  'credit risk measurement': 'CR',
+  'operational & integrated risk': 'OR',
+  'operational risk': 'OR',
+  'liquidity & treasury risk': 'LR',
+  'liquidity and treasury risk': 'LR',
+  'risk management and investment': 'IM',
+  'investment management': 'IM',
+  'current issues': 'CURR',
+  'current issues in financial markets': 'CURR',
+
+  // Special / Common
+  'revision marathons & cram sessions': 'MAR',
+  'revision marathons': 'MAR',
+  'marathons': 'MAR',
+  'doubt clearing & live q&a': 'Q&A',
+  'doubt clearing': 'Q&A',
+  'exam strategy & career guides': 'STRAT',
+  'exam strategy': 'STRAT'
+};
+
+export function getSubjectAbbreviation(name) {
+  if (!name) return '';
+  const cleaned = name
+    .replace(/^(?:S\d+|B\d+|Section\s*\d+|Part\s*\d+)[-:\s.]*/i, '')
+    .trim()
+    .toLowerCase();
+
+  if (SUBJECT_ABBR_MAP[cleaned]) {
+    return SUBJECT_ABBR_MAP[cleaned];
+  }
+
+  for (const [key, abbr] of Object.entries(SUBJECT_ABBR_MAP)) {
+    if (cleaned.includes(key)) {
+      return abbr;
+    }
+  }
+
+  // Fallback: initials from words
+  const words = cleaned.split(/[\s&/_-]+/).filter(w => w.length > 0 && !['and', 'of', 'in', 'the', 'for'].includes(w));
+  if (words.length > 1) {
+    return words.map(w => w[0].toUpperCase()).slice(0, 3).join('');
+  }
+  return cleaned.slice(0, 4).toUpperCase();
+}
+
+export function getVideoTrackInfo(pv) {
+  let isCFA = false;
+  let isFRM = false;
+  let levelCode = null;        // '1', '2', '3' (level / part)
+  let courseFullName = '';
+  let subjectCode = null;      // 'QM', 'FI', 'VRM', etc.
+  let subjectFullName = '';
+  let otherTags = [];
+
+  const lists = pv.lists || [];
+
+  for (const l of lists) {
+    const lname = l.name || '';
+    const lid = (l.id || '').toLowerCase();
+
+    // Check course levels
+    if (/cfa\s*(?:level\s*)?1/i.test(lname) || lid.includes('cfa_l1')) {
+      isCFA = true;
+      levelCode = '1';
+      courseFullName = lname || 'CFA Level 1';
+    } else if (/cfa\s*(?:level\s*)?2/i.test(lname) || lid.includes('cfa_l2')) {
+      isCFA = true;
+      levelCode = '2';
+      courseFullName = lname || 'CFA Level 2';
+    } else if (/cfa\s*(?:level\s*)?3/i.test(lname) || lid.includes('cfa_l3')) {
+      isCFA = true;
+      levelCode = '3';
+      courseFullName = lname || 'CFA Level 3';
+    } else if (/frm\s*(?:part\s*)?1/i.test(lname) || lid.includes('frm_p1')) {
+      isFRM = true;
+      levelCode = '1';
+      courseFullName = lname || 'FRM Part 1';
+    } else if (/frm\s*(?:part\s*)?2/i.test(lname) || lid.includes('frm_p2')) {
+      isFRM = true;
+      levelCode = '2';
+      courseFullName = lname || 'FRM Part 2';
+    } else if (/cfa/i.test(lname)) {
+      isCFA = true;
+      if (!courseFullName) courseFullName = lname;
+    } else if (/frm/i.test(lname)) {
+      isFRM = true;
+      if (!courseFullName) courseFullName = lname;
+    } else if (l.is_course) {
+      if (!courseFullName) courseFullName = lname;
+    } else {
+      const subAbbr = getSubjectAbbreviation(lname);
+      if (subAbbr) {
+        subjectCode = subAbbr;
+        subjectFullName = lname;
+      } else {
+        otherTags.push(lname);
+      }
+    }
+  }
+
+  // Scan title/series/session if list didn't specify course
+  const textToScan = `${pv.title || ''} ${pv.series || ''} ${pv.session_name || ''}`;
+  if (!levelCode) {
+    if (/cfa\s*(?:level\s*)?1/i.test(textToScan) || /cfa\s*l1/i.test(textToScan)) {
+      isCFA = true;
+      levelCode = '1';
+      courseFullName = 'CFA Level 1';
+    } else if (/cfa\s*(?:level\s*)?2/i.test(textToScan) || /cfa\s*l2/i.test(textToScan)) {
+      isCFA = true;
+      levelCode = '2';
+      courseFullName = 'CFA Level 2';
+    } else if (/cfa\s*(?:level\s*)?3/i.test(textToScan) || /cfa\s*l3/i.test(textToScan)) {
+      isCFA = true;
+      levelCode = '3';
+      courseFullName = 'CFA Level 3';
+    } else if (/frm\s*(?:part\s*)?1/i.test(textToScan) || /frm\s*(?:part\s*)?i\b/i.test(textToScan) || /frm\s*p1/i.test(textToScan)) {
+      isFRM = true;
+      levelCode = '1';
+      courseFullName = 'FRM Part 1';
+    } else if (/frm\s*(?:part\s*)?2/i.test(textToScan) || /frm\s*(?:part\s*)?ii\b/i.test(textToScan) || /frm\s*p2/i.test(textToScan)) {
+      isFRM = true;
+      levelCode = '2';
+      courseFullName = 'FRM Part 2';
+    } else if (/\bcfa\b/i.test(textToScan)) {
+      isCFA = true;
+      if (!courseFullName) courseFullName = 'CFA Program';
+    } else if (/\bfrm\b/i.test(textToScan)) {
+      isFRM = true;
+      if (!courseFullName) courseFullName = 'FRM Program';
+    }
+  }
+
+  // Scan subject from title if not detected
+  if (!subjectCode) {
+    for (const [key, abbr] of Object.entries(SUBJECT_ABBR_MAP)) {
+      if (textToScan.toLowerCase().includes(key)) {
+        subjectCode = abbr;
+        subjectFullName = key.toUpperCase();
+        break;
+      }
+    }
+  }
+
+  return { isCFA, isFRM, levelCode, courseFullName, subjectCode, subjectFullName, otherTags };
+}
 
 export default function FullVideoListView({
   plannedVideos = [],
@@ -81,7 +259,12 @@ export default function FullVideoListView({
         const inHook = pv.hook?.toLowerCase().includes(q);
         const inSeries = pv.series?.toLowerCase().includes(q);
         const inLinked = pv.linked_video_title?.toLowerCase().includes(q);
-        if (!inTitle && !inNotes && !inHook && !inSeries && !inLinked) return false;
+        const track = getVideoTrackInfo(pv);
+        const inTrack = (track.levelCode || '').toLowerCase().includes(q) ||
+                        (track.subjectCode || '').toLowerCase().includes(q) ||
+                        (track.courseFullName || '').toLowerCase().includes(q) ||
+                        (track.subjectFullName || '').toLowerCase().includes(q);
+        if (!inTitle && !inNotes && !inHook && !inSeries && !inLinked && !inTrack) return false;
       }
 
       return true;
@@ -657,7 +840,7 @@ export default function FullVideoListView({
           <table className="analytics-table" style={{ margin: 0 }}>
             <thead>
               <tr>
-                <th style={{ width: '40px', textAlign: 'center' }}>
+                <th style={{ width: '38px', textAlign: 'center', padding: '0.5rem 0.35rem' }}>
                   <input
                     type="checkbox"
                     checked={isAllCurrentSelected}
@@ -666,18 +849,21 @@ export default function FullVideoListView({
                     style={{ cursor: 'pointer' }}
                   />
                 </th>
-                <th style={{ minWidth: '300px' }}>Video Topic & Content</th>
-                <th>Course / List</th>
-                <th>Exam Window</th>
-                <th>Status & Week</th>
-                <th style={{ minWidth: '240px' }}>Linked YouTube Video</th>
-                <th style={{ width: '80px', textAlign: 'center' }}>Actions</th>
+                <th style={{ width: '36px', textAlign: 'center', padding: '0.5rem 0.35rem' }} title="Urgent Priority">
+                  <Flame size={13} color="#EA580C" />
+                </th>
+                <th style={{ minWidth: '260px', padding: '0.5rem 0.65rem' }}>Video Topic & Content</th>
+                <th style={{ width: '135px', padding: '0.5rem 0.65rem', whiteSpace: 'nowrap' }}>Track & Subject</th>
+                <th style={{ width: '100px', padding: '0.5rem 0.65rem', whiteSpace: 'nowrap' }}>Exam Window</th>
+                <th style={{ width: '130px', padding: '0.5rem 0.65rem', whiteSpace: 'nowrap' }}>Status & Week</th>
+                <th style={{ minWidth: '200px', padding: '0.5rem 0.65rem' }}>Linked YouTube Video</th>
+                <th style={{ width: '65px', textAlign: 'center', padding: '0.5rem 0.35rem' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredVideos.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={8} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                     No planned videos found matching current filters.
                   </td>
                 </tr>
@@ -686,8 +872,8 @@ export default function FullVideoListView({
                   const isSelected = selectedIds.has(pv.id);
                   const isShort = pv.content_type === 'short';
                   const isLinked = !!pv.linked_video_id;
-
                   const isRowActive = selectedItem?.id === pv.id;
+                  const track = getVideoTrackInfo(pv);
 
                   return (
                     <tr
@@ -698,12 +884,17 @@ export default function FullVideoListView({
                       }}
                       style={{
                         cursor: 'pointer',
-                        background: isRowActive ? 'rgba(47, 101, 246, 0.08)' : (isSelected ? 'rgba(232, 163, 61, 0.08)' : 'inherit'),
-                        borderLeft: isRowActive ? '3px solid #2F65F6' : undefined
+                        background: isRowActive 
+                          ? (track.isCFA ? 'rgba(22, 163, 74, 0.08)' : track.isFRM ? 'rgba(37, 99, 235, 0.08)' : 'rgba(47, 101, 246, 0.08)')
+                          : (isSelected ? 'rgba(232, 163, 61, 0.08)' : 'inherit'),
+                        borderLeft: isRowActive 
+                          ? (track.isCFA ? '4px solid #16A34A' : track.isFRM ? '4px solid #2563EB' : '4px solid #2F65F6')
+                          : (track.isCFA ? '3px solid rgba(22, 163, 74, 0.5)' : track.isFRM ? '3px solid rgba(37, 99, 235, 0.5)' : '3px solid transparent'),
+                        transition: 'background 0.15s ease'
                       }}
                     >
                       {/* 1. Selection Checkbox */}
-                      <td style={{ textAlign: 'center' }}>
+                      <td style={{ textAlign: 'center', padding: '0.45rem 0.35rem' }}>
                         <input
                           type="checkbox"
                           checked={isSelected}
@@ -712,94 +903,194 @@ export default function FullVideoListView({
                         />
                       </td>
 
-                      {/* 2. Video Title & Meta */}
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                              {isShort ? (
-                                <span style={{
-                                  fontSize: '0.68rem',
-                                  padding: '1px 5px',
-                                  borderRadius: '6px',
-                                  background: 'rgba(232, 163, 61, 0.2)',
-                                  color: '#E8A33D',
-                                  fontWeight: 700,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '2px'
-                                }}>
-                                  <Zap size={10} fill="#E8A33D" /> Short ({pv.target_duration_sec || 60}s)
-                                </span>
-                              ) : (
-                                <span style={{
-                                  fontSize: '0.68rem',
-                                  padding: '1px 5px',
-                                  borderRadius: '6px',
-                                  background: 'var(--bg-surface-elevated)',
-                                  color: 'var(--text-muted)',
-                                  fontWeight: 600
-                                }}>
-                                  Lecture
-                                </span>
-                              )}
+                      {/* 1.5 Urgent Button (Fix 2) */}
+                      <td style={{ textAlign: 'center', padding: '0.45rem 0.35rem' }}>
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const newUrgent = pv.is_urgent ? 0 : 1;
+                            try {
+                              await fetch(`/api/planner/videos/${pv.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ is_urgent: newUrgent })
+                              });
+                              onRefresh && onRefresh();
+                            } catch (err) {
+                              console.error('Failed to toggle urgent:', err);
+                            }
+                          }}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '2px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: pv.is_urgent ? '#EA580C' : '#94A3B8',
+                            transition: 'all 0.15s ease'
+                          }}
+                          title={pv.is_urgent ? "Urgent Priority (Click to unmark)" : "Mark as Urgent"}
+                        >
+                          <Flame size={14} fill={pv.is_urgent ? "#EA580C" : "none"} color={pv.is_urgent ? "#EA580C" : "#94A3B8"} />
+                        </button>
+                      </td>
 
-                              <strong style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>
-                                {pv.title}
-                              </strong>
+                      {/* 2. Video Title & Meta */}
+                      <td style={{ padding: '0.45rem 0.65rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0 }}>
+                          {isShort ? (
+                            <span style={{
+                              fontSize: '0.65rem',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              background: 'rgba(232, 163, 61, 0.2)',
+                              color: '#EA580C',
+                              fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '2px',
+                              flexShrink: 0
+                            }}>
+                              <Zap size={9} fill="#EA580C" /> Short
+                            </span>
+                          ) : (
+                            <span style={{
+                              fontSize: '0.65rem',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              background: 'var(--bg-surface-elevated)',
+                              color: 'var(--text-muted)',
+                              fontWeight: 600,
+                              flexShrink: 0
+                            }}>
+                              Lec
+                            </span>
+                          )}
+
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div
+                              title={pv.title}
+                              style={{
+                                fontSize: '0.84rem',
+                                fontWeight: 600,
+                                color: 'var(--text-primary)',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                maxWidth: '340px'
+                              }}
+                            >
+                              {pv.title}
                             </div>
 
-                            {/* Short Hook or Series */}
-                            {isShort && (pv.hook || pv.series) && (
-                              <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
+                            {/* Short Hook or Series or Notes inline preview */}
+                            {(pv.notes || pv.hook || pv.series) && (
+                              <div
+                                title={pv.notes || pv.hook || pv.series}
+                                style={{
+                                  fontSize: '0.7rem',
+                                  color: 'var(--text-muted)',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  maxWidth: '340px',
+                                  marginTop: '1px'
+                                }}
+                              >
                                 {pv.series && <span style={{ color: 'var(--cfa-gold)', fontWeight: 600 }}>{pv.series} · </span>}
-                                {pv.hook && <span style={{ fontStyle: 'italic' }}>"{pv.hook}"</span>}
-                              </div>
-                            )}
-
-                            {/* Notes preview */}
-                            {pv.notes && !isShort && (
-                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                {pv.notes}
+                                {pv.hook && <span style={{ fontStyle: 'italic' }}>"{pv.hook}" </span>}
+                                {pv.notes && <span>📝 {pv.notes}</span>}
                               </div>
                             )}
                           </div>
                         </div>
                       </td>
 
-                      {/* 3. Course / List */}
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                          {pv.lists && pv.lists.length > 0 ? (
-                            pv.lists.map(l => (
+                      {/* 3. Track & Subject (Fix 2: Color indicates CFA green / FRM blue, so level is just 1/2/3 without 'CFA'/'FRM' tag) */}
+                      <td style={{ padding: '0.45rem 0.65rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'nowrap' }}>
+                          {track.levelCode && (
+                            <span
+                              title={track.courseFullName || (track.isCFA ? `CFA Level ${track.levelCode}` : `FRM Part ${track.levelCode}`)}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: '18px',
+                                padding: '1.5px 5px',
+                                borderRadius: '4px',
+                                fontSize: '0.72rem',
+                                fontWeight: 800,
+                                whiteSpace: 'nowrap',
+                                background: track.isCFA ? '#DCFCE7' : (track.isFRM ? '#DBEAFE' : '#F1F5F9'),
+                                color: track.isCFA ? '#15803D' : (track.isFRM ? '#1D4ED8' : '#475569'),
+                                border: `1px solid ${track.isCFA ? '#86EFAC' : (track.isFRM ? '#93C5FD' : '#CBD5E1')}`
+                              }}
+                            >
+                              {track.levelCode}
+                            </span>
+                          )}
+
+                          {track.subjectCode && (
+                            <span
+                              title={track.subjectFullName || track.subjectCode}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                padding: '1.5px 5.5px',
+                                borderRadius: '4px',
+                                fontSize: '0.68rem',
+                                fontWeight: 700,
+                                whiteSpace: 'nowrap',
+                                background: track.isCFA ? '#F0FDF4' : (track.isFRM ? '#EFF6FF' : '#F8FAFC'),
+                                color: track.isCFA ? '#166534' : (track.isFRM ? '#1E40AF' : '#64748B'),
+                                border: `1px solid ${track.isCFA ? '#BBF7D0' : (track.isFRM ? '#BFDBFE' : '#E2E8F0')}`
+                              }}
+                            >
+                              {track.subjectCode}
+                            </span>
+                          )}
+
+                          {!track.levelCode && !track.subjectCode && (
+                            track.otherTags.length > 0 ? (
                               <span
-                                key={l.id}
-                                className={`badge ${l.is_course ? 'badge-cfa' : 'badge-prep'}`}
-                                style={{ fontSize: '0.7rem', width: 'fit-content' }}
+                                title={track.otherTags.join(', ')}
+                                style={{
+                                  fontSize: '0.68rem',
+                                  fontWeight: 600,
+                                  padding: '1.5px 5px',
+                                  borderRadius: '4px',
+                                  background: '#F1F5F9',
+                                  color: '#64748B',
+                                  whiteSpace: 'nowrap'
+                                }}
                               >
-                                {l.name}
+                                {track.otherTags[0].slice(0, 6)}
                               </span>
-                            ))
-                          ) : (
-                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>—</span>
+                            ) : (
+                              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>—</span>
+                            )
                           )}
                         </div>
                       </td>
 
                       {/* 4. Exam Window */}
-                      <td>
+                      <td style={{ padding: '0.45rem 0.65rem', whiteSpace: 'nowrap' }}>
                         <span style={{
-                          fontSize: '0.75rem',
+                          fontSize: '0.74rem',
                           fontWeight: 600,
                           color: pv.session_name ? 'var(--text-primary)' : 'var(--text-muted)'
                         }}>
-                          {pv.session_name || 'Evergreen'}
+                          {pv.session_name ? pv.session_name.replace(/CFA\s*Level\s*\d|FRM\s*Part\s*\d/gi, '').trim() || pv.session_name : 'Evergreen'}
                         </span>
                       </td>
 
                       {/* 5. Status & Week */}
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <td style={{ padding: '0.45rem 0.65rem', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                           <select
                             value={pv.status}
                             onChange={(e) => handleInlineStatusChange(pv.id, e.target.value)}
@@ -808,8 +1099,8 @@ export default function FullVideoListView({
                               border: '1px solid var(--border-subtle)',
                               color: pv.status === 'Uploaded' ? 'var(--success-emerald)' : (pv.status === 'Scheduled' ? 'var(--cfa-gold)' : 'var(--text-primary)'),
                               borderRadius: 'var(--radius-sm)',
-                              padding: '2px 6px',
-                              fontSize: '0.75rem',
+                              padding: '2px 5px',
+                              fontSize: '0.72rem',
                               fontWeight: 600,
                               cursor: 'pointer'
                             }}
@@ -820,31 +1111,40 @@ export default function FullVideoListView({
                             <option value="Uploaded">Uploaded ✓</option>
                             <option value="Overdue">Overdue</option>
                           </select>
+
+                          {pv.assigned_week && (
+                            <span style={{
+                              fontSize: '0.67rem',
+                              fontWeight: 600,
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              background: 'var(--bg-surface-elevated)',
+                              color: 'var(--text-muted)',
+                              border: '1px solid var(--border-hairline)'
+                            }}>
+                              W{pv.assigned_week.replace(/^.*W(\d+)$/i, '$1')}
+                            </span>
+                          )}
                         </div>
-                        {pv.assigned_week && (
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                            Week: {pv.assigned_week}
-                          </div>
-                        )}
                       </td>
 
                       {/* 6. Linked YouTube Video (Manual Link UI) */}
-                      <td>
+                      <td style={{ padding: '0.45rem 0.65rem' }}>
                         {isLinked ? (
                           <div style={{
                             background: 'rgba(16, 185, 129, 0.06)',
                             border: '1px solid rgba(16, 185, 129, 0.25)',
                             borderRadius: 'var(--radius-sm)',
-                            padding: '0.35rem 0.5rem',
+                            padding: '0.25rem 0.45rem',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            gap: '0.5rem'
+                            gap: '0.4rem'
                           }}>
                             <div style={{ overflow: 'hidden', flex: 1 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                                 <span style={{
-                                  fontSize: '0.65rem',
+                                  fontSize: '0.62rem',
                                   color: 'var(--success-emerald)',
                                   fontWeight: 700,
                                   textTransform: 'uppercase'
@@ -858,21 +1158,21 @@ export default function FullVideoListView({
                                   style={{ color: 'var(--text-muted)' }}
                                   title="Open on YouTube"
                                 >
-                                  <ExternalLink size={11} />
+                                  <ExternalLink size={10} />
                                 </a>
                               </div>
                               <div style={{
-                                fontSize: '0.75rem',
+                                fontSize: '0.73rem',
                                 color: 'var(--text-primary)',
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
-                                maxWidth: '170px'
+                                maxWidth: '160px'
                               }} title={pv.linked_video_title || pv.linked_video_id}>
                                 {pv.linked_video_title || pv.linked_video_id}
                               </div>
                               {pv.linked_video_views !== undefined && (
-                                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
                                   {(pv.linked_video_views || 0).toLocaleString()} views
                                 </div>
                               )}
@@ -882,7 +1182,7 @@ export default function FullVideoListView({
                               type="button"
                               onClick={() => onOpenLinkModal(pv)}
                               className="btn-ghost"
-                              style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem', color: 'var(--cfa-gold)' }}
+                              style={{ padding: '0.15rem 0.35rem', fontSize: '0.68rem', color: 'var(--cfa-gold)' }}
                               title="Change linked YouTube video"
                             >
                               Edit
@@ -896,9 +1196,9 @@ export default function FullVideoListView({
                               background: 'rgba(232, 163, 61, 0.08)',
                               border: '1px dashed rgba(232, 163, 61, 0.4)',
                               borderRadius: 'var(--radius-sm)',
-                              padding: '0.35rem 0.65rem',
+                              padding: '0.25rem 0.5rem',
                               color: 'var(--cfa-gold)',
-                              fontSize: '0.74rem',
+                              fontSize: '0.72rem',
                               fontWeight: 600,
                               cursor: 'pointer',
                               display: 'flex',
@@ -907,20 +1207,20 @@ export default function FullVideoListView({
                             }}
                             title="Manually link to published YouTube video using link or ID"
                           >
-                            <Link2 size={12} />
-                            <span>+ Link YT Video</span>
+                            <Link2 size={11} />
+                            <span>+ Link YT</span>
                           </button>
                         )}
                       </td>
 
                       {/* 7. Row Actions */}
-                      <td style={{ textAlign: 'center' }}>
+                      <td style={{ textAlign: 'center', padding: '0.45rem 0.35rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'center', gap: '0.25rem' }}>
                           <button
                             type="button"
                             className="btn-ghost"
                             onClick={() => onEditVideo(pv)}
-                            style={{ padding: '0.25rem' }}
+                            style={{ padding: '0.2rem' }}
                             title="Edit planned video"
                           >
                             <Edit3 size={13} />

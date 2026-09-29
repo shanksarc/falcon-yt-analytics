@@ -3,11 +3,10 @@ import {
   TrendingUp, BarChart2, PieChart, Target, AlertTriangle, 
   Check, RefreshCw, Calendar, ArrowLeft,
   ChevronRight, ChevronLeft, BookOpen, Layers, Globe, Clock, CheckCircle2,
-  Filter, Eye, ThumbsUp, MessageSquare, PlaySquare, Search, ListTodo,
+  Filter, Eye, ThumbsUp, MessageSquare, PlaySquare, Search,
   Table as TableIcon, LayoutGrid, ArrowUpDown, X
 } from 'lucide-react';
 import TargetManagementModal from './TargetManagementModal';
-import LinkYouTubeModal from './LinkYouTubeModal';
 
 function StatusIcon({ status, color, size = 13 }) {
   if (status === 'TARGET_MET' || status === 'ON_TRACK') {
@@ -211,7 +210,7 @@ function formatCourseShortName(name) {
     .replace(/FRM\s*Part\s*2/i, 'FRM P2');
 }
 
-export default function ProgressSection({ initialSessionId = null }) {
+export default function ProgressSection({ initialSessionId = null, onNavigateToVideos }) {
   // Navigation & Scope State:
   // activeCourseId: null = Global (Full Plan), string = Course Drill-Down
   // activeSessionId: null = All Sessions, string = Filtered by Session
@@ -244,13 +243,6 @@ export default function ProgressSection({ initialSessionId = null }) {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hoveredPoint, setHoveredPoint] = useState(null);
-
-  // Planned Video List for Related Section state
-  const [videoSearchQuery, setVideoSearchQuery] = useState('');
-  const [videoCurrentPage, setVideoCurrentPage] = useState(1);
-  const [updatingVideoId, setUpdatingVideoId] = useState(null);
-  const [linkingPlannedVideo, setLinkingPlannedVideo] = useState(null);
-  const videoPageSize = 5;
 
   useEffect(() => {
     fetchAnalytics(activeCourseId, activeSessionId);
@@ -286,43 +278,12 @@ export default function ProgressSection({ initialSessionId = null }) {
     } else {
       setCourseViewMode('cards');
     }
-    setVideoCurrentPage(1);
-    setVideoSearchQuery('');
     setSubjectSearch('');
     setSubjectFilter('all');
   };
 
   const handleSelectSession = (sessId) => {
     setActiveSessionId(sessId === activeSessionId ? null : sessId);
-    setVideoCurrentPage(1);
-    setVideoSearchQuery('');
-  };
-
-  const handleFilterBySubject = (subjectName) => {
-    setVideoSearchQuery(subjectName);
-    setVideoCurrentPage(1);
-    const el = document.getElementById('planned-videos-section');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  const handleMarkUploaded = async (videoId) => {
-    setUpdatingVideoId(videoId);
-    try {
-      const res = await fetch(`/api/planner/videos/${videoId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'Uploaded', production_stage: 'Uploaded' })
-      });
-      if (res.ok) {
-        await fetchAnalytics(activeCourseId, activeSessionId);
-      }
-    } catch (err) {
-      console.error("Failed to mark video as uploaded:", err);
-    } finally {
-      setUpdatingVideoId(null);
-    }
   };
 
   if (loading && !analytics) {
@@ -437,21 +398,6 @@ export default function ProgressSection({ initialSessionId = null }) {
     cumAngle += frac;
     return { ...seg, strokeDash, strokeOffset, pct: Math.round(frac * 100) };
   });
-
-  // ---------------- 5. Planned Video List for Related Section (Row 3) ----------------
-  const pendingVideos = analytics.pending_planned_videos || [];
-  const filteredVideos = pendingVideos.filter(v => {
-    if (!videoSearchQuery) return true;
-    const q = videoSearchQuery.toLowerCase();
-    const titleMatch = (v.title || '').toLowerCase().includes(q);
-    const sessionMatch = (v.session_name || '').toLowerCase().includes(q);
-    const listMatch = (v.lists || []).some(l => (l.name || '').toLowerCase().includes(q));
-    const notesMatch = (v.notes || '').toLowerCase().includes(q);
-    return titleMatch || sessionMatch || listMatch || notesMatch;
-  });
-
-  const totalPages = Math.max(1, Math.ceil(filteredVideos.length / videoPageSize));
-  const currentVideos = filteredVideos.slice((videoCurrentPage - 1) * videoPageSize, videoCurrentPage * videoPageSize);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -648,489 +594,301 @@ export default function ProgressSection({ initialSessionId = null }) {
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* Top Hero Section: 60% Left Target Completion + 40% Right YouTube Tracker */}
+      {/* Consolidated Overview Row: Target Mini Cards (Col 1) + Status Breakdown (Col 2) + Burnup Pace (Col 3) + Velocity (Col 4) */}
       {/* ------------------------------------------------------------- */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-        gap: '1.25rem',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+        gap: '14px',
         alignItems: 'stretch'
       }}>
-        {/* Left Side: 60% Target Completion & Stat Boxes */}
-        <div className="overview-block-card" style={{ 
-          padding: '1.5rem', 
-          borderLeft: `5px solid ${statusColor}`,
-          background: 'var(--bg-surface)',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          gap: '1.5rem',
-          flex: '1.5'
-        }}>
-          {/* Top Half: Dial & Title */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-            {/* Radial Arc Gauge */}
-            <div style={{ position: 'relative', width: '135px', height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="135" height="125" viewBox="0 0 160 150">
-                <circle 
-                  cx="80" 
-                  cy="80" 
-                  r={radius}
-                  fill="none"
-                  stroke="var(--bg-surface-elevated)"
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={`${arcLength} ${circumference}`}
-                  strokeDashoffset={0}
-                  strokeLinecap="round"
-                  transform="rotate(150 80 80)"
-                />
-                <circle 
-                  cx="80" 
-                  cy="80" 
-                  r={radius}
-                  fill="none"
-                  stroke={statusColor}
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={`${arcLength} ${circumference}`}
-                  strokeDashoffset={strokeDashoffset}
-                  strokeLinecap="round"
-                  transform="rotate(150 80 80)"
-                  style={{ transition: 'stroke-dashoffset 0.8s ease' }}
-                />
-              </svg>
-
-              <div style={{ 
-                position: 'absolute', 
-                top: '40px', 
-                textAlign: 'center', 
-                width: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center'
-              }}>
-                <span style={{ fontSize: '1.65rem', fontWeight: 800, color: statusColor, lineHeight: 1 }}>
-                  {completion_pct}%
-                </span>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '2px' }}>
-                  {target > 0 ? 'Target Met' : 'Planned Met'}
-                </span>
-              </div>
+        {/* Column 1: Full Plan Target Extruded Card with Inset Elements (Fix 3) */}
+        <div 
+          className="overview-block-card" 
+          style={{ 
+            padding: '1.25rem', 
+            background: 'var(--bg-surface)', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'space-between',
+            gap: '8px'
+          }}
+        >
+          {/* Header with Title & Targets trigger */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px 4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Target size={15} color={statusColor} />
+              <span style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B', letterSpacing: '-0.01em' }}>
+                {isGlobalMode 
+                  ? 'Full Plan Target' 
+                  : activeSessionId && cleanActiveSession
+                    ? `${course?.name} · ${cleanActiveSession}` 
+                    : `${course?.name} Target`}
+              </span>
             </div>
+            <button
+              onClick={() => setShowTargetModal(true)}
+              style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                color: '#2F65F6',
+                background: 'rgba(47, 101, 246, 0.08)',
+                border: '1px solid rgba(47, 101, 246, 0.2)',
+                cursor: 'pointer',
+                padding: '3px 8px',
+                borderRadius: '8px',
+                transition: 'all 0.15s ease'
+              }}
+              title="Set and edit curriculum targets"
+            >
+              Edit Targets
+            </button>
+          </div>
 
-            {/* Title & Pacing Info */}
-            <div style={{ flex: 1, minWidth: '180px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.2rem' }}>
-                <Target size={16} color={statusColor} />
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-                  {isGlobalMode 
-                    ? 'Full Plan Target' 
-                    : activeSessionId && cleanActiveSession
-                      ? `${course?.name} · ${cleanActiveSession}` 
-                      : `${course?.name} Target`}
-                </h3>
+          {/* Mini Inset Card 1: Target Count */}
+          <div
+            className="soft-inset"
+            style={{
+              padding: '8px 12px',
+              borderRadius: '12px',
+              background: '#E6EAF0',
+              boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '7px',
+                  background: 'rgba(47, 101, 246, 0.12)',
+                  color: '#2F65F6',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Target size={13} />
               </div>
-
-              <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: '0.2rem 0' }}>
-                {uploaded} <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 400 }}>
-                  / {target > 0 ? target : planned} uploaded
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
-                <span 
-                  style={{ 
-                    padding: '2px 7px', 
-                    borderRadius: '4px', 
-                    fontSize: '0.72rem', 
-                    fontWeight: 600,
-                    background: `${statusColor}20`,
-                    color: statusColor,
-                    border: `1px solid ${statusColor}40`
-                  }}
-                >
-                  {pacing?.status_label || 'Status'}
-                </span>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-                  {pacing?.display_text}
-                </span>
-              </div>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Target Count
+              </span>
+            </div>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: '#1E293B', lineHeight: 1 }}>
+              {target > 0 ? target : '—'}
             </div>
           </div>
 
-          {/* Bottom Half: Stat Boxes (LABELS OUTSIDE, NUMBERS IN BOX) */}
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(5, 1fr)', 
-            gap: '0.75rem',
-            width: '100%'
-          }}>
-            {/* 1. Target */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
-              <span style={{ 
-                fontSize: '0.78rem', 
-                fontWeight: 600, 
-                color: 'var(--text-secondary)', 
-                textAlign: 'center',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
-                Target
-              </span>
-              <div style={{ 
-                background: 'var(--bg-surface-elevated)', 
-                border: '1px solid var(--border-subtle)', 
-                borderRadius: 'var(--radius-md)', 
-                width: '100%', 
-                padding: '0.55rem 0.25rem', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                boxShadow: '0 2px 5px rgba(0,0,0,0.12)'
-              }}>
-                <span style={{ 
-                  fontSize: '1.9rem', 
-                  fontWeight: 800, 
-                  fontFamily: 'var(--font-sans)', 
-                  color: 'var(--text-primary)',
-                  lineHeight: 1 
-                }}>
-                  {target > 0 ? target : '—'}
-                </span>
+          {/* Mini Inset Card 2: Total Planned */}
+          <div
+            className="soft-inset"
+            style={{
+              padding: '8px 12px',
+              borderRadius: '12px',
+              background: '#E6EAF0',
+              boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '7px',
+                  background: 'rgba(139, 92, 246, 0.12)',
+                  color: '#8B5CF6',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Calendar size={13} />
               </div>
-            </div>
-
-            {/* 2. Planned */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
-              <span style={{ 
-                fontSize: '0.78rem', 
-                fontWeight: 600, 
-                color: 'var(--text-secondary)', 
-                textAlign: 'center',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
-                Planned
+              <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Total Planned
               </span>
-              <div style={{ 
-                background: 'var(--bg-surface-elevated)', 
-                border: '1px solid var(--border-subtle)', 
-                borderRadius: 'var(--radius-md)', 
-                width: '100%', 
-                padding: '0.55rem 0.25rem', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                boxShadow: '0 2px 5px rgba(0,0,0,0.12)'
-              }}>
-                <span style={{ 
-                  fontSize: '1.9rem', 
-                  fontWeight: 800, 
-                  fontFamily: 'var(--font-sans)', 
-                  color: 'var(--text-primary)',
-                  lineHeight: 1 
-                }}>
-                  {planned}
-                </span>
-              </div>
             </div>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: '#1E293B', lineHeight: 1 }}>
+              {planned}
+            </div>
+          </div>
 
-            {/* 3. Uploaded */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
-              <span style={{ 
-                fontSize: '0.78rem', 
-                fontWeight: 600, 
-                color: 'var(--text-secondary)', 
-                textAlign: 'center',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
+          {/* Mini Inset Card 3: Uploaded */}
+          <div
+            className="soft-inset"
+            style={{
+              padding: '8px 12px',
+              borderRadius: '12px',
+              background: '#E6EAF0',
+              boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '7px',
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  color: '#10B981',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <CheckCircle2 size={13} />
+              </div>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Uploaded
               </span>
-              <div style={{ 
-                background: 'var(--bg-surface-elevated)', 
-                border: '1px solid rgba(62, 166, 94, 0.35)', 
-                borderRadius: 'var(--radius-md)', 
-                width: '100%', 
-                padding: '0.55rem 0.25rem', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                boxShadow: '0 2px 5px rgba(0,0,0,0.12)'
-              }}>
-                <span style={{ 
-                  fontSize: '1.9rem', 
-                  fontWeight: 800, 
-                  fontFamily: 'var(--font-sans)', 
-                  color: '#3EA65E',
-                  lineHeight: 1 
-                }}>
-                  {uploaded}
-                </span>
-              </div>
             </div>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: '#10B981', lineHeight: 1 }}>
+              {uploaded}
+            </div>
+          </div>
 
-            {/* 4. Scheduled */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
-              <span style={{ 
-                fontSize: '0.78rem', 
-                fontWeight: 600, 
-                color: 'var(--text-secondary)', 
-                textAlign: 'center',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
+          {/* Mini Inset Card 4: Scheduled */}
+          <div
+            className="soft-inset"
+            style={{
+              padding: '8px 12px',
+              borderRadius: '12px',
+              background: '#E6EAF0',
+              boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '7px',
+                  background: 'rgba(6, 182, 212, 0.12)',
+                  color: '#06B6D4',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Clock size={13} />
+              </div>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Scheduled
               </span>
-              <div style={{ 
-                background: 'var(--bg-surface-elevated)', 
-                border: '1px solid rgba(59, 130, 246, 0.35)', 
-                borderRadius: 'var(--radius-md)', 
-                width: '100%', 
-                padding: '0.55rem 0.25rem', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                boxShadow: '0 2px 5px rgba(0,0,0,0.12)'
-              }}>
-                <span style={{ 
-                  fontSize: '1.9rem', 
-                  fontWeight: 800, 
-                  fontFamily: 'var(--font-sans)', 
-                  color: '#3B82F6',
-                  lineHeight: 1 
-                }}>
-                  {scheduled}
-                </span>
-              </div>
             </div>
-
-            {/* 5. Overdue (Always visible for consistent layout across all courses) */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
-              <span style={{ 
-                fontSize: '0.78rem', 
-                fontWeight: 600, 
-                color: overdue > 0 ? '#DC2626' : 'var(--text-secondary)', 
-                textAlign: 'center',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
-                Overdue
-              </span>
-              <div style={{ 
-                background: overdue > 0 ? 'rgba(239, 68, 68, 0.08)' : 'var(--bg-surface-elevated)', 
-                border: overdue > 0 ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid var(--border-subtle)', 
-                borderRadius: 'var(--radius-md)', 
-                width: '100%', 
-                padding: '0.55rem 0.25rem', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                boxShadow: '0 2px 5px rgba(0,0,0,0.12)'
-              }}>
-                <span style={{ 
-                  fontSize: '1.9rem', 
-                  fontWeight: 800, 
-                  fontFamily: 'var(--font-sans)', 
-                  color: overdue > 0 ? '#DC2626' : 'var(--text-secondary)',
-                  lineHeight: 1 
-                }}>
-                  {overdue}
-                </span>
-              </div>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: '#06B6D4', lineHeight: 1 }}>
+              {scheduled}
             </div>
           </div>
-        </div>
 
-        {/* Right Side: 40% YouTube Impact Tracker Card */}
-        <div className="overview-block-card" style={{ 
-          padding: '1.5rem', 
-          background: 'var(--bg-surface)',
-          border: '1px solid var(--border-subtle)',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          gap: '1.25rem',
-          flex: '1'
-        }}>
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{ 
-                background: 'rgba(255, 0, 0, 0.12)', 
-                color: '#FF0000', 
-                padding: '6px', 
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <PlaySquare size={17} color="#FF0000" />
+          {/* Mini Inset Card 5: Target Met & Pacing */}
+          <div
+            className="soft-inset"
+            style={{
+              padding: '8px 12px',
+              borderRadius: '12px',
+              background: '#E6EAF0',
+              boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '7px',
+                  background: `${statusColor}18`,
+                  color: statusColor,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <TrendingUp size={13} />
               </div>
               <div>
-                <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-                  YouTube Impact
-                </h4>
-                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '1px 0 0' }}>
-                  Uploaded planned videos
-                </p>
-              </div>
-            </div>
-
-            <span style={{ 
-              fontSize: '0.7rem', 
-              padding: '2px 7px', 
-              borderRadius: '4px', 
-              background: 'var(--bg-surface-elevated)', 
-              color: 'var(--text-secondary)',
-              fontWeight: 600,
-              border: '1px solid var(--border-hairline)',
-              whiteSpace: 'nowrap'
-            }}>
-              {youtube_stats?.uploaded_count || uploaded} uploaded
-            </span>
-          </div>
-
-          {/* YouTube Metrics Grid */}
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(2, 1fr)', 
-            gap: '0.75rem' 
-          }}>
-            {/* Views */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                <Eye size={13} color="#3B82F6" />
-                <span>Views</span>
-              </div>
-              <div style={{ 
-                background: 'var(--bg-surface-elevated)', 
-                border: '1px solid var(--border-subtle)', 
-                borderRadius: 'var(--radius-md)', 
-                padding: '0.7rem 0.85rem', 
-                textAlign: 'left'
-              }}>
-                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#3B82F6', lineHeight: 1 }}>
-                  {formatCompactNum(youtube_stats?.total_views || 0)}
+                <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Target Met
+                </div>
+                <div style={{ fontSize: '9px', color: statusColor, fontWeight: 600 }}>
+                  {pacing?.display_text || pacing?.status_label}
                 </div>
               </div>
             </div>
-
-            {/* Watch Time Hours */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                <Clock size={13} color="#3EA65E" />
-                <span>Watch Time</span>
-              </div>
-              <div style={{ 
-                background: 'var(--bg-surface-elevated)', 
-                border: '1px solid var(--border-subtle)', 
-                borderRadius: 'var(--radius-md)', 
-                padding: '0.7rem 0.85rem', 
-                textAlign: 'left'
-              }}>
-                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#3EA65E', lineHeight: 1 }}>
-                  {formatCompactNum(youtube_stats?.total_watch_time_hours || 0)}h
-                </div>
-              </div>
-            </div>
-
-            {/* Likes */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                <ThumbsUp size={13} color="#E8A33D" />
-                <span>Likes</span>
-              </div>
-              <div style={{ 
-                background: 'var(--bg-surface-elevated)', 
-                border: '1px solid var(--border-subtle)', 
-                borderRadius: 'var(--radius-md)', 
-                padding: '0.7rem 0.85rem', 
-                textAlign: 'left'
-              }}>
-                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
-                  {formatCompactNum(youtube_stats?.total_likes || 0)}
-                </div>
-              </div>
-            </div>
-
-            {/* Comments */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                <MessageSquare size={13} color="#A855F7" />
-                <span>Comments</span>
-              </div>
-              <div style={{ 
-                background: 'var(--bg-surface-elevated)', 
-                border: '1px solid var(--border-subtle)', 
-                borderRadius: 'var(--radius-md)', 
-                padding: '0.7rem 0.85rem', 
-                textAlign: 'left'
-              }}>
-                <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
-                  {(youtube_stats?.total_comments || 0).toLocaleString()}
-                </div>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span
+                style={{
+                  padding: '2px 5px',
+                  borderRadius: '5px',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  background: `${statusColor}22`,
+                  color: statusColor
+                }}
+              >
+                {pacing?.status_label || 'Status'}
+              </span>
+              <span style={{ fontSize: '15px', fontWeight: 800, color: statusColor, lineHeight: 1 }}>
+                {completion_pct}%
+              </span>
             </div>
           </div>
 
-          {/* Top Video Snippet */}
-          {youtube_stats?.top_videos?.length > 0 && (
-            <div style={{ 
-              fontSize: '0.72rem', 
-              color: 'var(--text-muted)', 
-              borderTop: '1px solid var(--border-hairline)', 
-              paddingTop: '0.6rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.5rem'
-            }}>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                Top video: <strong style={{ color: 'var(--text-primary)' }}>{youtube_stats.top_videos[0].title}</strong>
-              </span>
-              <span style={{ color: '#3B82F6', fontWeight: 700, flexShrink: 0 }}>
-                {youtube_stats.top_videos[0].views.toLocaleString()} views
-              </span>
-            </div>
-          )}
-
-          {/* Unlinked Upload Notice */}
-          {uploaded > (youtube_stats?.uploaded_count || 0) && (
-            <div style={{
-              marginTop: '0.65rem',
-              padding: '0.5rem 0.75rem',
-              background: 'rgba(232, 163, 61, 0.1)',
-              border: '1px solid rgba(232, 163, 61, 0.3)',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: '0.72rem',
-              color: '#E8A33D',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem'
-            }}>
-              <AlertTriangle size={13} style={{ flexShrink: 0 }} />
-              <span>
-                {uploaded - (youtube_stats?.uploaded_count || 0)} uploaded {uploaded - (youtube_stats?.uploaded_count || 0) === 1 ? 'entry is' : 'entries are'} awaiting YouTube confirmation above.
-              </span>
+          {/* Mini Inset Card 6 (Optional): Overdue */}
+          {overdue > 0 && (
+            <div
+              className="soft-inset"
+              style={{
+                padding: '8px 12px',
+                borderRadius: '12px',
+                background: 'rgba(239, 68, 68, 0.08)',
+                boxShadow: 'inset 2px 2px 4px rgba(239, 68, 68, 0.15), inset -2px -2px 4px rgba(255, 255, 255, 0.85)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
+                  style={{
+                    width: '26px',
+                    height: '26px',
+                    borderRadius: '7px',
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    color: '#EF4444',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <AlertTriangle size={13} />
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Overdue
+                </span>
+              </div>
+              <div style={{ fontSize: '15px', fontWeight: 800, color: '#EF4444', lineHeight: 1 }}>
+                {overdue}
+              </div>
             </div>
           )}
         </div>
-      </div>
 
-      {/* ------------------------------------------------------------- */}
-      {/* Row 2: Status Breakdown, Burnup Pace, & Weekly Velocity       */}
-      {/* ------------------------------------------------------------- */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
-        gap: '1.25rem',
-        alignItems: 'stretch'
-      }}>
         {/* Card 1: Status Breakdown (Moved up from bottom) */}
         <div className="overview-block-card" style={{ padding: '1.25rem', background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div style={{ marginBottom: '0.75rem' }}>
@@ -1355,357 +1113,7 @@ export default function ProgressSection({ initialSessionId = null }) {
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* Row 3: Planned Video List for Related Section (Quick Glance)  */}
-      {/* ------------------------------------------------------------- */}
-      <div id="planned-videos-section" className="content-card" style={{ padding: '1.25rem', background: 'var(--bg-surface)' }}>
-        {/* Header: Title, Scope, Count, & Search */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          flexWrap: 'wrap', 
-          gap: '0.75rem',
-          marginBottom: '1rem',
-          borderBottom: '1px solid var(--border-hairline)',
-          paddingBottom: '0.85rem'
-        }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ListTodo size={17} color="#3B82F6" />
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-                {isGlobalMode 
-                  ? 'Full Plan · Planned Videos' 
-                  : activeSessionId && cleanActiveSession
-                    ? `${course?.name} · ${cleanActiveSession} · Planned Videos`
-                    : `${course?.name} · Planned Videos`}
-              </h3>
-              <span style={{ 
-                fontSize: '0.7rem', 
-                padding: '2px 8px', 
-                borderRadius: '12px', 
-                background: 'var(--bg-surface-elevated)', 
-                color: 'var(--text-secondary)',
-                fontWeight: 600,
-                border: '1px solid var(--border-hairline)'
-              }}>
-                {filteredVideos.length} to produce
-              </span>
-            </div>
-          </div>
-
-          {/* Search Input */}
-          <div style={{ position: 'relative', minWidth: '220px' }}>
-            <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-            <input 
-              type="text"
-              value={videoSearchQuery}
-              onChange={(e) => {
-                setVideoSearchQuery(e.target.value);
-                setVideoCurrentPage(1);
-              }}
-              placeholder="Search planned videos..."
-              style={{
-                width: '100%',
-                padding: '0.35rem 0.65rem 0.35rem 1.9rem',
-                fontSize: '0.78rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'var(--bg-surface-elevated)',
-                border: '1px solid var(--border-subtle)',
-                color: 'var(--text-primary)',
-                outline: 'none'
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Video List / Table */}
-        {filteredVideos.length === 0 ? (
-          <div style={{ 
-            padding: '2.5rem 1rem', 
-            textAlign: 'center', 
-            color: 'var(--text-muted)',
-            background: 'var(--bg-surface-elevated)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px dashed var(--border-subtle)'
-          }}>
-            <CheckCircle2 size={24} color="#3EA65E" style={{ marginBottom: '0.5rem' }} />
-            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-              No pending planned videos for this section
-            </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>
-              All planned lectures for this scope have been uploaded or no videos match your search.
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            {currentVideos.map((v, idx) => {
-              const cList = (v.lists || []).find(l => l.is_course === 1);
-              const sList = (v.lists || []).find(l => l.is_course === 0);
-              const isUpdating = updatingVideoId === v.id;
-              const isOverdue = v.assigned_week && v.assigned_week < (analytics.current_iso_week || '9999');
-
-              return (
-                <div 
-                  key={v.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '1rem',
-                    padding: '0.75rem 1rem',
-                    background: 'var(--bg-surface-elevated)',
-                    border: '1px solid var(--border-subtle)',
-                    borderRadius: 'var(--radius-md)',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--text-secondary)'}
-                  onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-subtle)'}
-                >
-                  {/* Left Column: Number, Title & Metadata */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: 1, minWidth: 0 }}>
-                    <span style={{ 
-                      fontSize: '0.75rem', 
-                      color: 'var(--text-muted)', 
-                      fontWeight: 700, 
-                      minWidth: '22px', 
-                      textAlign: 'center',
-                      flexShrink: 0
-                    }}>
-                      {(videoCurrentPage - 1) * videoPageSize + idx + 1}
-                    </span>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', minWidth: 0, flex: 1 }}>
-                      <span style={{ 
-                        fontSize: '0.88rem', 
-                        fontWeight: 600, 
-                        color: 'var(--text-primary)', 
-                        overflow: 'hidden', 
-                        textOverflow: 'ellipsis', 
-                        whiteSpace: 'nowrap' 
-                      }}>
-                        {v.title}
-                      </span>
-
-                      {/* Tag Badges */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                        {/* Course / Subject */}
-                        {(cList || sList) && (
-                          <span style={{ 
-                            fontSize: '0.68rem', 
-                            padding: '1px 6px', 
-                            borderRadius: '4px', 
-                            background: 'rgba(59, 130, 246, 0.1)', 
-                            color: '#3B82F6',
-                            fontWeight: 600,
-                            border: '1px solid rgba(59, 130, 246, 0.25)',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '3px'
-                          }}>
-                            <BookOpen size={10} />
-                            {sList ? (cList ? `${cList.name} · ${sList.name}` : sList.name) : cList.name}
-                          </span>
-                        )}
-
-                        {/* Session */}
-                        <span style={{ 
-                          fontSize: '0.68rem', 
-                          padding: '1px 6px', 
-                          borderRadius: '4px', 
-                          background: 'var(--bg-surface)', 
-                          color: 'var(--text-secondary)',
-                          border: '1px solid var(--border-hairline)',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '3px'
-                        }}>
-                          <Calendar size={10} />
-                          {v.session_name || 'Evergreen'}
-                        </span>
-
-                        {/* Timing */}
-                        {(v.assigned_month || v.assigned_week) && (
-                          <span style={{ 
-                            fontSize: '0.68rem', 
-                            padding: '1px 6px', 
-                            borderRadius: '4px', 
-                            background: 'var(--bg-surface)', 
-                            color: isOverdue ? '#FF0000' : 'var(--text-muted)',
-                            border: `1px solid ${isOverdue ? 'rgba(255,0,0,0.3)' : 'var(--border-hairline)'}`,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '3px'
-                          }}>
-                            <Clock size={10} />
-                            {v.assigned_month || v.assigned_week}
-                          </span>
-                        )}
-
-                        {/* Notes preview */}
-                        {v.notes && (
-                          <span 
-                            title={v.notes}
-                            style={{ 
-                              fontSize: '0.68rem', 
-                              color: 'var(--text-muted)', 
-                              maxWidth: '180px', 
-                              overflow: 'hidden', 
-                              textOverflow: 'ellipsis', 
-                              whiteSpace: 'nowrap' 
-                            }}
-                          >
-                            📝 {v.notes}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Status & Action Button */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-                    <span style={{ 
-                      fontSize: '0.72rem', 
-                      padding: '2px 8px', 
-                      borderRadius: '4px', 
-                      fontWeight: 600,
-                      background: v.status === 'Scheduled' 
-                        ? 'rgba(59, 130, 246, 0.15)' 
-                        : v.status === 'In Progress'
-                          ? 'rgba(232, 163, 61, 0.15)'
-                          : isOverdue
-                            ? 'rgba(255, 0, 0, 0.15)'
-                            : 'var(--bg-surface)',
-                      color: v.status === 'Scheduled' 
-                        ? '#3B82F6' 
-                        : v.status === 'In Progress'
-                          ? '#E8A33D'
-                          : isOverdue
-                            ? '#FF0000'
-                            : 'var(--text-secondary)',
-                      border: `1px solid ${
-                        v.status === 'Scheduled' 
-                          ? 'rgba(59, 130, 246, 0.3)' 
-                          : v.status === 'In Progress'
-                            ? 'rgba(232, 163, 61, 0.3)'
-                            : isOverdue
-                              ? 'rgba(255, 0, 0, 0.3)'
-                              : 'var(--border-hairline)'
-                      }`
-                    }}>
-                      {v.status || 'Planned'}
-                    </span>
-
-                    {/* Compact Icon Action Button -> Opens LinkYouTubeModal */}
-                    <button
-                      type="button"
-                      disabled={isUpdating}
-                      onClick={() => setLinkingPlannedVideo(v)}
-                      title="Link & Mark Uploaded"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '8px',
-                        background: 'rgba(62, 166, 94, 0.12)',
-                        border: '1px solid rgba(62, 166, 94, 0.35)',
-                        color: '#3EA65E',
-                        cursor: isUpdating ? 'wait' : 'pointer',
-                        transition: 'all 0.15s ease',
-                        flexShrink: 0
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isUpdating) e.currentTarget.style.background = 'rgba(62, 166, 94, 0.22)';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isUpdating) e.currentTarget.style.background = 'rgba(62, 166, 94, 0.12)';
-                      }}
-                    >
-                      {isUpdating ? (
-                        <RefreshCw size={12} className="spin" />
-                      ) : (
-                        <Check size={13} strokeWidth={2.5} />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Pagination Controls */}
-        {filteredVideos.length > videoPageSize && (
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
-            marginTop: '1rem',
-            paddingTop: '0.85rem',
-            borderTop: '1px solid var(--border-hairline)',
-            fontSize: '0.78rem',
-            color: 'var(--text-muted)'
-          }}>
-            <div>
-              Showing <strong style={{ color: 'var(--text-primary)' }}>{(videoCurrentPage - 1) * videoPageSize + 1}</strong> to <strong style={{ color: 'var(--text-primary)' }}>{Math.min(videoCurrentPage * videoPageSize, filteredVideos.length)}</strong> of <strong style={{ color: 'var(--text-primary)' }}>{filteredVideos.length}</strong> planned videos
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <button
-                type="button"
-                disabled={videoCurrentPage <= 1}
-                onClick={() => setVideoCurrentPage(p => Math.max(1, p - 1))}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  padding: '0.25rem 0.6rem',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.75rem',
-                  background: 'var(--bg-surface-elevated)',
-                  border: '1px solid var(--border-subtle)',
-                  color: videoCurrentPage <= 1 ? 'var(--text-muted)' : 'var(--text-primary)',
-                  cursor: videoCurrentPage <= 1 ? 'not-allowed' : 'pointer',
-                  opacity: videoCurrentPage <= 1 ? 0.5 : 1
-                }}
-              >
-                <ChevronLeft size={13} />
-                <span>Prev</span>
-              </button>
-
-              <span style={{ padding: '0 0.4rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                Page {videoCurrentPage} of {totalPages}
-              </span>
-
-              <button
-                type="button"
-                disabled={videoCurrentPage >= totalPages}
-                onClick={() => setVideoCurrentPage(p => Math.min(totalPages, p + 1))}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  padding: '0.25rem 0.6rem',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.75rem',
-                  background: 'var(--bg-surface-elevated)',
-                  border: '1px solid var(--border-subtle)',
-                  color: videoCurrentPage >= totalPages ? 'var(--text-muted)' : 'var(--text-primary)',
-                  cursor: videoCurrentPage >= totalPages ? 'not-allowed' : 'pointer',
-                  opacity: videoCurrentPage >= totalPages ? 0.5 : 1
-                }}
-              >
-                <span>Next</span>
-                <ChevronRight size={13} />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ------------------------------------------------------------- */}
-      {/* Row 4 (Bottom): Course Breakdown (Global or Course Drilldown) */}
+      {/* Row 3 (Bottom): Course Breakdown (Global or Course Drilldown) */}
       {/* ------------------------------------------------------------- */}
 
       {/* A. GLOBAL MODE: Course Breakdown (Tabular with Infographics + Card Toggle) */}
@@ -2702,12 +2110,12 @@ export default function ProgressSection({ initialSessionId = null }) {
                                   </div>
                                 </td>
 
-                                {/* Action: Filter planned videos */}
+                                {/* Action: View videos in full video list */}
                                 <td style={{ textAlign: 'right' }}>
                                   <button
                                     type="button"
-                                    onClick={() => handleFilterBySubject(sub.name)}
-                                    title={`Filter planned video list below for ${sub.name}`}
+                                    onClick={() => onNavigateToVideos && onNavigateToVideos(sub.name)}
+                                    title={`View videos for ${sub.name} in Full Video List`}
                                     style={{
                                       display: 'inline-flex',
                                       alignItems: 'center',
@@ -2719,23 +2127,27 @@ export default function ProgressSection({ initialSessionId = null }) {
                                       background: 'var(--bg-surface-elevated)',
                                       border: '1px solid var(--border-subtle)',
                                       color: 'var(--text-secondary)',
-                                      cursor: 'pointer',
+                                      cursor: onNavigateToVideos ? 'pointer' : 'default',
                                       transition: 'all 0.15s ease',
                                       whiteSpace: 'nowrap'
                                     }}
                                     onMouseEnter={(e) => {
-                                      e.currentTarget.style.borderColor = '#3B82F6';
-                                      e.currentTarget.style.color = '#3B82F6';
-                                      e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)';
+                                      if (onNavigateToVideos) {
+                                        e.currentTarget.style.borderColor = '#3B82F6';
+                                        e.currentTarget.style.color = '#3B82F6';
+                                        e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)';
+                                      }
                                     }}
                                     onMouseLeave={(e) => {
-                                      e.currentTarget.style.borderColor = 'var(--border-subtle)';
-                                      e.currentTarget.style.color = 'var(--text-secondary)';
-                                      e.currentTarget.style.background = 'var(--bg-surface-elevated)';
+                                      if (onNavigateToVideos) {
+                                        e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                                        e.currentTarget.style.color = 'var(--text-secondary)';
+                                        e.currentTarget.style.background = 'var(--bg-surface-elevated)';
+                                      }
                                     }}
                                   >
-                                    <Filter size={11} />
-                                    <span>Filter</span>
+                                    <BookOpen size={11} />
+                                    <span>Videos</span>
                                   </button>
                                 </td>
                               </tr>
@@ -3143,18 +2555,6 @@ export default function ProgressSection({ initialSessionId = null }) {
           onClose={() => setShowTargetModal(false)}
           onSuccess={() => {
             setShowTargetModal(false);
-            fetchAnalytics(activeCourseId, activeSessionId);
-          }}
-        />
-      )}
-
-      {/* Manual YouTube Link & Mark Uploaded Modal */}
-      {linkingPlannedVideo && (
-        <LinkYouTubeModal
-          plannedVideo={linkingPlannedVideo}
-          onClose={() => setLinkingPlannedVideo(null)}
-          onSuccess={() => {
-            setLinkingPlannedVideo(null);
             fetchAnalytics(activeCourseId, activeSessionId);
           }}
         />

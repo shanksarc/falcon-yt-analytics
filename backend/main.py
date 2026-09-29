@@ -275,6 +275,7 @@ class PlannedVideoCreate(BaseModel):
     series: Optional[str] = ""
     target_duration_sec: Optional[int] = 60
     production_stage: Optional[str] = "Idea"
+    is_urgent: Optional[int] = 0
 
 class PlannedVideoUpdate(BaseModel):
     title: Optional[str] = None
@@ -290,6 +291,7 @@ class PlannedVideoUpdate(BaseModel):
     series: Optional[str] = None
     target_duration_sec: Optional[int] = None
     production_stage: Optional[str] = None
+    is_urgent: Optional[int] = None
 
 class ShortsTargetUpdate(BaseModel):
     session_id: str
@@ -1508,6 +1510,9 @@ def update_planned_video(pv_id: str, pv: PlannedVideoUpdate):
     if pv.notes is not None:
         fields.append("notes = ?")
         values.append(pv.notes)
+    if pv.is_urgent is not None:
+        fields.append("is_urgent = ?")
+        values.append(1 if pv.is_urgent else 0)
 
     values.append(pv_id)
     cursor.execute(f"UPDATE planned_videos SET {', '.join(fields)} WHERE id = ?", tuple(values))
