@@ -35,8 +35,8 @@ export default function TopHeader({
   return (
     <header style={{
       height: '64px',
-      background: '#FFFFFF',
-      borderBottom: '1px solid rgba(226, 232, 240, 0.8)',
+      background: '#EBEEF2',
+      borderBottom: '1px solid rgba(166, 175, 195, 0.35)',
       padding: '0 28px',
       display: 'flex',
       alignItems: 'center',
@@ -70,20 +70,20 @@ export default function TopHeader({
           <span style={{ fontWeight: 600, color: '#1E293B' }}>{getTabBreadcrumb()}</span>
         </div>
 
-        {/* Floating Capsule Search Bar */}
+        {/* Floating Capsule Search Bar - Soft Inset */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          background: '#F8FAFC',
-          border: '1px solid rgba(226, 232, 240, 0.8)',
+          background: '#E6EAF0',
+          border: 'none',
           borderRadius: '9999px',
-          padding: '8px 16px',
+          padding: '7px 16px',
           fontSize: '13px',
           color: '#64748B',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+          boxShadow: 'inset 2px 2px 5px rgba(166, 175, 195, 0.55), inset -2px -2px 5px rgba(255, 255, 255, 0.85)',
         }}>
-          <Search size={14} style={{ color: '#94A3B8', flexShrink: 0 }} />
+          <Search size={14} style={{ color: '#64748B', flexShrink: 0 }} />
           <input
             type="text"
             placeholder="Search videos, topics, playlists..."
@@ -92,8 +92,8 @@ export default function TopHeader({
               border: 'none',
               outline: 'none',
               fontSize: '13px',
-              color: '#334155',
-              width: '200px',
+              color: '#1E293B',
+              width: '210px',
               fontFamily: 'inherit',
             }}
           />
@@ -114,21 +114,21 @@ export default function TopHeader({
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
-            padding: '8px 16px',
-            background: '#FFFFFF',
-            border: '1px solid rgba(226, 232, 240, 0.8)',
+            padding: '7px 16px',
+            background: '#F0F3F7',
+            border: '1px solid rgba(255, 255, 255, 0.8)',
             borderRadius: '9999px',
             fontSize: '13px',
-            fontWeight: 500,
-            color: '#334155',
+            fontWeight: 600,
+            color: '#1E293B',
             cursor: isSyncing ? 'not-allowed' : 'pointer',
             opacity: isSyncing ? 0.6 : 1,
-            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+            boxShadow: '3px 3px 8px rgba(166, 175, 195, 0.4), -3px -3px 8px rgba(255, 255, 255, 0.85)',
             transition: 'all 0.15s ease',
             fontFamily: 'inherit',
           }}
         >
-          <RefreshCw size={13} style={{ color: '#7C3AED' }} className={isSyncing ? 'animate-spin' : ''} />
+          <RefreshCw size={13} style={{ color: '#2F65F6' }} className={isSyncing ? 'animate-spin' : ''} />
           <span>{isSyncing ? 'Syncing...' : 'Sync Channel'}</span>
         </button>
 
@@ -155,8 +155,8 @@ export default function TopHeader({
             width: '8px',
             height: '8px',
             borderRadius: '50%',
-            background: '#7C3AED',
-            boxShadow: '0 0 0 2px #FFFFFF',
+            background: '#2F65F6',
+            boxShadow: '0 0 0 2px #EBEEF2',
           }} />
         </button>
 

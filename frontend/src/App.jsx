@@ -17,6 +17,7 @@ import SettingsModal from './components/SettingsModal';
 import ManageVideoListsModal from './components/ManageVideoListsModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import AdminAuthGate from './components/AdminAuthGate';
+import RightSidebarDock from './components/RightSidebarDock';
 
 import { LayoutDashboard, BarChart3, AlertTriangle, History, Users, Calendar, CheckCircle2 } from 'lucide-react';
 
@@ -24,6 +25,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('planner'); // 'overview' | 'planner' | 'leaderboard' | 'low-ctr' | 'change-log' | 'competitors'
   const [drilldownTarget, setDrilldownTarget] = useState(null); // { type: 'list' | 'video', id: '...' }
   const [status, setStatus] = useState(null);
+  const [selectedInspectorItem, setSelectedInspectorItem] = useState(null);
   const [lowCtrCount, setLowCtrCount] = useState(0);
   const [plannerQueueCount, setPlannerQueueCount] = useState(0);
   const [syllabusQueueCount, setSyllabusQueueCount] = useState(0);
@@ -169,10 +171,25 @@ export default function App() {
     }
   };
 
+  const handleUpdateInspectorItemStatus = async (item, newStatus) => {
+    if (!item || !item.id) return;
+    try {
+      await fetch(`/api/planner/videos/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      setSelectedInspectorItem(prev => prev ? { ...prev, status: newStatus } : null);
+      setRefreshKey(prev => prev + 1);
+    } catch (err) {
+      console.error("Failed to update status from inspector:", err);
+    }
+  };
+
   return (
     <AdminAuthGate>
-      <div className="flex h-screen w-full overflow-hidden bg-[#F8FAFC] text-slate-800 font-sans">
-      {/* 1. Left Sidebar Navigation (<aside>) */}
+      <div className="flex h-screen w-full overflow-hidden bg-[#EBEEF2] text-slate-800 font-sans">
+      {/* 1. Left Sidebar Navigation (<aside> w-60) */}
       <Sidebar
         activeTab={activeTab}
         onSelectTab={handleTabSwitch}
@@ -189,7 +206,7 @@ export default function App() {
         onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
       />
 
-      {/* 2. SCROLLABLE MAIN CONTENT AREA */}
+      {/* 2. SCROLLABLE MAIN WORKSPACE CANVAS (flex-1) */}
       <main style={{ flex: 1, height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         {/* Top Utility Header (h-16) */}
         <TopHeader
@@ -243,12 +260,20 @@ export default function App() {
 
             {/* Tab 2: Upload Planner */}
             {activeTab === 'planner' && (
-              <UploadPlannerView key={`planner-${refreshKey}`} />
+              <UploadPlannerView
+                key={`planner-${refreshKey}`}
+                onSelectItem={setSelectedInspectorItem}
+                selectedItem={selectedInspectorItem}
+              />
             )}
 
             {/* Tab 2.5: Syllabus Matcher */}
             {activeTab === 'syllabus' && (
-              <SyllabusMatcherView key={`syllabus-${refreshKey}`} />
+              <SyllabusMatcherView
+                key={`syllabus-${refreshKey}`}
+                onSelectItem={setSelectedInspectorItem}
+                selectedItem={selectedInspectorItem}
+              />
             )}
 
             {/* Tab 3: Monthly Leaderboard */}
@@ -288,6 +313,19 @@ export default function App() {
           Falcon YT Analytics · CFA & FRM Channel Intelligence Platform · Hierarchical List System & 12-Month YoY Engine
         </footer>
       </main>
+
+      {/* 3. RIGHT DOCK (w-80 / 320px) — Static & Contextual Rail */}
+      <RightSidebarDock
+        status={status}
+        onSyncChannel={handleSyncChannel}
+        isSyncing={isSyncing}
+        selectedItem={selectedInspectorItem}
+        onClearSelectedItem={() => setSelectedInspectorItem(null)}
+        onUpdateItemStatus={handleUpdateInspectorItemStatus}
+        onOpenLinkModal={(item) => {
+          setActiveTab('planner');
+        }}
+      />
 
       {/* Modals */}
       {(activeChangeVideo || showNewChangeModal) && (

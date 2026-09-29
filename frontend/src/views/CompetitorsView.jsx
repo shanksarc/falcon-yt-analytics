@@ -40,7 +40,7 @@ export default function CompetitorsView({ onOpenAddCompetitor }) {
   return (
     <div>
       {/* Competitor Channels Overview */}
-      <div style={{ background: '#FFFFFF', border: '1px solid #E8ECF1', borderRadius: '16px', boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.04)', padding: '24px', marginBottom: '24px' }}>
+      <div style={{ background: '#F0F3F7', border: '1px solid rgba(255, 255, 255, 0.6)', borderRadius: '22px', boxShadow: '6px 6px 14px rgba(166, 175, 195, 0.55), -6px -6px 14px rgba(255, 255, 255, 0.85)', padding: '24px', marginBottom: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#1E293B', letterSpacing: '-0.01em' }}>Niche Competitor Benchmarking</h2>
@@ -52,20 +52,14 @@ export default function CompetitorsView({ onOpenAddCompetitor }) {
           <button 
             onClick={onOpenAddCompetitor}
             id="btn-add-competitor"
+            className="soft-button-primary"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '8px 16px',
-              background: '#7C3AED',
-              color: '#FFFFFF',
+              padding: '8px 18px',
               fontSize: '0.82rem',
               fontWeight: 600,
-              borderRadius: '9999px',
-              border: 'none',
-              cursor: 'pointer',
-              boxShadow: '0 2px 6px -1px rgba(124, 58, 237, 0.35)',
-              transition: 'all 0.15s ease',
               fontFamily: 'inherit',
             }}
           >
@@ -78,12 +72,15 @@ export default function CompetitorsView({ onOpenAddCompetitor }) {
             <div 
               key={c.id} 
               style={{ 
-                background: 'var(--bg-surface-elevated)', 
+                background: selectedChannel === c.id ? '#FFFFFF' : '#F0F3F7', 
                 padding: '1.25rem', 
-                borderRadius: 'var(--radius-md)',
-                border: selectedChannel === c.id ? '1px solid var(--cfa-gold)' : '1px solid var(--border-subtle)',
+                borderRadius: '18px', 
+                border: selectedChannel === c.id ? '2px solid #2F65F6' : '1px solid rgba(255, 255, 255, 0.8)',
+                boxShadow: selectedChannel === c.id 
+                  ? '6px 6px 16px rgba(47, 101, 246, 0.25)' 
+                  : '4px 4px 10px rgba(166, 175, 195, 0.35), -4px -4px 10px rgba(255, 255, 255, 0.85)',
                 cursor: 'pointer',
-                transition: 'border-color 0.2s'
+                transition: 'all 0.2s ease'
               }}
               onClick={() => setSelectedChannel(selectedChannel === c.id ? 'ALL' : c.id)}
             >
@@ -94,15 +91,15 @@ export default function CompetitorsView({ onOpenAddCompetitor }) {
                   style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} 
                 />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{c.name}</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1E293B' }}>{c.name}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{c.channel_handle}</div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                <span>Subscribers: <strong style={{ color: 'var(--text-primary)' }}>{formatViews(c.subscriber_count)}</strong></span>
-                <span>Videos: <strong style={{ color: 'var(--text-primary)' }}>{c.video_count}</strong></span>
-                <span>Views: <strong style={{ color: 'var(--text-primary)' }}>{formatViews(c.total_views)}</strong></span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748B' }}>
+                <span>Subscribers: <strong style={{ color: '#1E293B' }}>{formatViews(c.subscriber_count)}</strong></span>
+                <span>Videos: <strong style={{ color: '#1E293B' }}>{c.video_count}</strong></span>
+                <span>Views: <strong style={{ color: '#1E293B' }}>{formatViews(c.total_views)}</strong></span>
               </div>
             </div>
           ))}
@@ -162,13 +159,25 @@ export default function CompetitorsView({ onOpenAddCompetitor }) {
               <input 
                 type="text" 
                 placeholder="Search competitor titles..."
-                className="form-input"
-                style={{ paddingLeft: '2rem', width: '240px', padding: '0.4rem 0.8rem 0.4rem 2rem' }}
+                style={{
+                  paddingLeft: '2.1rem',
+                  paddingRight: '1rem',
+                  paddingTop: '0.45rem',
+                  paddingBottom: '0.45rem',
+                  width: '240px',
+                  background: '#E6EAF0',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  fontSize: '0.8rem',
+                  color: '#1E293B',
+                  outline: 'none',
+                  boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.5), inset -2px -2px 4px rgba(255, 255, 255, 0.8)'
+                }}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 id="input-search-competitors"
               />
-              <Search size={13} style={{ position: 'absolute', left: '0.7rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <Search size={13} style={{ position: 'absolute', left: '0.8rem', top: '50%', transform: 'translateY(-50%)', color: '#64748B' }} />
             </div>
 
             <select 

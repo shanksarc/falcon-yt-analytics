@@ -34,7 +34,7 @@ export default function LowCTRView({ onLogChangeForVideo, onEditCategoryForVideo
   const flaggedCount = videos.filter(v => v.is_flagged).length;
 
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #E8ECF1', borderRadius: '16px', boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.04)', padding: '24px' }}>
+    <div style={{ background: '#F0F3F7', border: '1px solid rgba(255, 255, 255, 0.6)', borderRadius: '22px', boxShadow: '6px 6px 14px rgba(166, 175, 195, 0.55), -6px -6px 14px rgba(255, 255, 255, 0.85)', padding: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

@@ -22,8 +22,8 @@ const navItems = [
 ];
 
 const examTracks = [
-  { name: 'CFA Level 1 & 2', color: '#8B5CF6' },
-  { name: 'FRM Part 1 & 2', color: '#3B82F6' },
+  { name: 'CFA L1 & L2', color: '#8B5CF6' },
+  { name: 'FRM P1 & P2', color: '#3B82F6' },
   { name: 'YouTube Shorts', color: '#2DD4BF' },
 ];
 
@@ -40,11 +40,11 @@ export default function Sidebar({
 
   /* ── Inline style objects to guarantee rendering regardless of CSS resets ── */
   const sidebarStyle = {
-    width: '256px',
-    minWidth: '256px',
+    width: '240px',
+    minWidth: '240px',
     height: '100%',
-    background: '#FFFFFF',
-    borderRight: '1px solid #E8ECF1',
+    background: '#EBEEF2',
+    borderRight: '1px solid rgba(166, 175, 195, 0.35)',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
@@ -57,36 +57,37 @@ export default function Sidebar({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '14px 16px',
-    borderRadius: '16px',
-    background: '#F8FAFC',
-    border: '1px solid #E2E8F0',
+    padding: '12px 14px',
+    borderRadius: '18px',
+    background: '#F0F3F7',
+    border: '1px solid rgba(255, 255, 255, 0.8)',
+    boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.45), -4px -4px 10px rgba(255, 255, 255, 0.85)',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
     marginBottom: '8px',
   };
 
   const avatarStyle = {
-    width: '40px',
-    height: '40px',
+    width: '38px',
+    height: '38px',
     borderRadius: '50%',
-    background: 'linear-gradient(135deg, #EEF2FF, #E0E7FF)',
-    color: '#4F46E5',
+    background: 'linear-gradient(135deg, #3A72F8 0%, #2054E2 100%)',
+    color: '#FFFFFF',
     fontWeight: 700,
-    fontSize: '14px',
+    fontSize: '13px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    border: '2px solid #C7D2FE',
+    boxShadow: '2px 3px 6px rgba(47, 101, 246, 0.3)',
     position: 'relative',
     flexShrink: 0,
   };
 
   const onlineDotStyle = {
-    width: '10px',
-    height: '10px',
+    width: '9px',
+    height: '9px',
     borderRadius: '50%',
-    background: '#10B981',
+    background: '#0D9488',
     border: '2px solid #FFFFFF',
     position: 'absolute',
     bottom: '-1px',
@@ -98,9 +99,9 @@ export default function Sidebar({
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
-    color: '#94A3B8',
+    color: '#64748B',
     padding: '0 12px',
-    marginTop: '24px',
+    marginTop: '22px',
     marginBottom: '8px',
   };
 
@@ -108,15 +109,15 @@ export default function Sidebar({
     width: '100%',
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: '11px',
     padding: '10px 14px',
-    borderRadius: '12px',
+    borderRadius: '14px',
     fontSize: '13px',
-    fontWeight: isActive ? 600 : 500,
-    color: isActive ? '#7C3AED' : '#475569',
-    background: isActive ? '#F5F3FF' : 'transparent',
-    border: isActive ? '1px solid rgba(124, 58, 237, 0.15)' : '1px solid transparent',
-    boxShadow: isActive ? '0 1px 3px rgba(124, 58, 237, 0.08)' : 'none',
+    fontWeight: isActive ? 700 : 500,
+    color: isActive ? '#2F65F6' : '#64748B',
+    background: isActive ? '#E6EAF0' : 'transparent',
+    border: 'none',
+    boxShadow: isActive ? 'inset 2px 2px 5px rgba(166, 175, 195, 0.5), inset -2px -2px 5px rgba(255, 255, 255, 0.85)' : 'none',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
     textAlign: 'left',
@@ -293,7 +294,7 @@ export default function Sidebar({
       </div>
 
       {/* ═══════ BOTTOM SECTION ═══════ */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '16px', borderTop: '1px solid #F1F5F9', marginTop: '16px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '16px', borderTop: '1px solid #F1F5F9', marginTop: '16px' }}>
         {/* Settings */}
         <button
           style={settingsBtnStyle}
@@ -304,24 +305,6 @@ export default function Sidebar({
           <Settings size={18} strokeWidth={1.8} />
           <span>Settings</span>
         </button>
-
-        {/* Promo / Seasonality Card */}
-        <div style={promoCardStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>
-            <Sparkles size={14} />
-            <span>Seasonality Alert</span>
-          </div>
-          <p style={{ fontSize: '11px', color: '#C7D2FE', lineHeight: 1.5, margin: 0 }}>
-            Prioritize marathon &amp; revision lectures 30–60 days before exam windows.
-          </p>
-          <button
-            style={promoButtonStyle}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#EEF2FF'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = '#FFFFFF'; }}
-          >
-            Sync Channel
-          </button>
-        </div>
       </div>
     </aside>
   );

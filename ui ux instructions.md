@@ -27,7 +27,7 @@ Refactor the Upload Planner page to establish a clean visual hierarchy, eliminat
 ### 3. Metric Card Consolidation & Redundancy Removal
 The current layout duplicates data across the top KPI cards and the lower progress card. Merge them into a single 4-card grid:
 
-- **Card 1: Lecture Progress**
+- **Card 1: Lecture Progress**ā
   - Metric: `1 / 8 Live` (`13%`)
   - Component: Embed a slim progress bar directly inside this card.
   - Subtext/Pills: `1 Live` · `0 Sched` · `7 Backlog`

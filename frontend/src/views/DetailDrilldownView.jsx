@@ -204,7 +204,7 @@ export default function DetailDrilldownView({
 
         {/* Topline Quick Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
-          <div style={{ background: 'var(--bg-surface-elevated)', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
+          <div style={{ background: '#F0F3F7', padding: '1rem', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.8)', boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.35), -4px -4px 10px rgba(255, 255, 255, 0.8)' }}>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Combined views</div>
             <div style={{ fontSize: '1.4rem', fontWeight: 700, fontFamily: 'var(--font-sans)', color: 'var(--text-primary)', marginTop: '2px' }}>
               {formatNum(stats.total_views)}
@@ -214,21 +214,21 @@ export default function DetailDrilldownView({
             </div>
           </div>
 
-          <div style={{ background: 'var(--bg-surface-elevated)', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
+          <div style={{ background: '#F0F3F7', padding: '1rem', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.8)', boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.35), -4px -4px 10px rgba(255, 255, 255, 0.8)' }}>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Watch time</div>
             <div style={{ fontSize: '1.4rem', fontWeight: 700, fontFamily: 'var(--font-sans)', color: 'var(--text-primary)', marginTop: '2px' }}>
               {formatNum(stats.total_watch_time)}h
             </div>
           </div>
 
-          <div style={{ background: 'var(--bg-surface-elevated)', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
+          <div style={{ background: '#F0F3F7', padding: '1rem', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.8)', boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.35), -4px -4px 10px rgba(255, 255, 255, 0.8)' }}>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Assigned videos</div>
             <div style={{ fontSize: '1.4rem', fontWeight: 700, fontFamily: 'var(--font-sans)', color: 'var(--text-primary)', marginTop: '2px' }}>
               {stats.video_count}
             </div>
           </div>
 
-          <div style={{ background: 'var(--bg-surface-elevated)', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
+          <div style={{ background: '#F0F3F7', padding: '1rem', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.8)', boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.35), -4px -4px 10px rgba(255, 255, 255, 0.8)' }}>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Average CTR</div>
             <div style={{ fontSize: '1.4rem', fontWeight: 700, fontFamily: 'var(--font-sans)', color: 'var(--text-primary)', marginTop: '2px' }}>
               {stats.avg_ctr}%

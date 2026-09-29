@@ -361,11 +361,11 @@ export function FormatProgressBar({
 
   return (
     <div style={{
-      background: '#FFFFFF',
-      borderRadius: '16px',
-      padding: '16px 18px',
-      border: '1px solid rgba(226, 232, 240, 0.8)',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
+      background: '#F0F3F7',
+      borderRadius: '20px',
+      padding: '18px 20px',
+      border: '1px solid rgba(255, 255, 255, 0.8)',
+      boxShadow: '6px 6px 14px rgba(166, 175, 195, 0.55), -6px -6px 14px rgba(255, 255, 255, 0.85)',
       display: 'flex',
       flexDirection: 'column',
       gap: '10px'
@@ -498,11 +498,11 @@ export function CoverageClarityGuide() {
         }}>
           {/* Card 1: Breadth */}
           <div style={{
-            background: '#FFFFFF',
-            borderRadius: '12px',
-            padding: '14px 16px',
-            border: '1px solid #E2E8F0',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+            background: '#F0F3F7',
+            borderRadius: '16px',
+            padding: '16px 18px',
+            border: '1px solid rgba(255, 255, 255, 0.8)',
+            boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.8)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
               <span style={{ fontSize: '16px' }}>🎯</span>
@@ -525,18 +525,18 @@ export function CoverageClarityGuide() {
               <br />
               A topic is counted as <b>Reached</b> if it has <b>at least 1 video</b> published in <i>any</i> format (Topic Discussion, Revision, or Practice Questions).
             </div>
-            <div style={{ marginTop: '8px', fontSize: '11px', color: '#64748B', background: '#F8FAFC', padding: '6px 10px', borderRadius: '6px' }}>
-              💡 <i>Answers: "What percentage of the syllabus syllabus footprint is active on our channel?"</i>
+            <div style={{ marginTop: '8px', fontSize: '11px', color: '#64748B', background: '#E6EAF0', padding: '6px 10px', borderRadius: '8px' }}>
+              💡 <i>Answers: "What percentage of the syllabus footprint is active on our channel?"</i>
             </div>
           </div>
 
           {/* Card 2: Depth */}
           <div style={{
-            background: '#FFFFFF',
-            borderRadius: '12px',
-            padding: '14px 16px',
-            border: '1px solid #E2E8F0',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+            background: '#F0F3F7',
+            borderRadius: '16px',
+            padding: '16px 18px',
+            border: '1px solid rgba(255, 255, 255, 0.8)',
+            boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.8)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
               <span style={{ fontSize: '16px' }}>🏆</span>
@@ -559,18 +559,18 @@ export function CoverageClarityGuide() {
               <br />
               A topic achieves <b>Mastery</b> only when <b>every required format</b> is published (Topic Discussion + Revision + Questions, skipping any marked N/A).
             </div>
-            <div style={{ marginTop: '8px', fontSize: '11px', color: '#64748B', background: '#F8FAFC', padding: '6px 10px', borderRadius: '6px' }}>
+            <div style={{ marginTop: '8px', fontSize: '11px', color: '#64748B', background: '#E6EAF0', padding: '6px 10px', borderRadius: '8px' }}>
               💡 <i>If you only have Discussion videos recorded, Mastery will remain 0% until you also publish Revision & Question Solving!</i>
             </div>
           </div>
 
           {/* Card 3: Format Breakdown */}
           <div style={{
-            background: '#FFFFFF',
-            borderRadius: '12px',
-            padding: '14px 16px',
-            border: '1px solid #E2E8F0',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+            background: '#F0F3F7',
+            borderRadius: '16px',
+            padding: '16px 18px',
+            border: '1px solid rgba(255, 255, 255, 0.8)',
+            boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.8)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
               <span style={{ fontSize: '16px' }}>📊</span>
@@ -603,7 +603,7 @@ export function CoverageClarityGuide() {
   );
 }
 
-export default function SyllabusMatcherView() {
+export default function SyllabusMatcherView({ onSelectItem, selectedItem }) {
   const [gridData, setGridData] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -919,11 +919,11 @@ export default function SyllabusMatcherView() {
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: '12px',
-        background: '#FFFFFF',
-        borderRadius: '16px',
-        padding: '10px 18px',
-        border: '1px solid rgba(226, 232, 240, 0.8)',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
+        background: '#F0F3F7',
+        borderRadius: '20px',
+        padding: '12px 20px',
+        border: '1px solid rgba(255, 255, 255, 0.8)',
+        boxShadow: '6px 6px 14px rgba(166, 175, 195, 0.55), -6px -6px 14px rgba(255, 255, 255, 0.85)',
         marginBottom: '16px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -941,10 +941,10 @@ export default function SyllabusMatcherView() {
             onClick={handleRunMatcher}
             disabled={isScanning}
             style={{
-              padding: '6px 14px',
+              padding: '7px 16px',
               borderRadius: '9999px',
-              border: '1px solid #E2E8F0',
-              background: '#FFFFFF',
+              border: '1px solid rgba(255, 255, 255, 0.8)',
+              background: '#EBEEF2',
               color: '#334155',
               fontSize: '12px',
               fontWeight: 600,
@@ -952,7 +952,7 @@ export default function SyllabusMatcherView() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+              boxShadow: '2px 2px 6px rgba(166, 175, 195, 0.4), -2px -2px 6px rgba(255, 255, 255, 0.8)'
             }}
             title="Run Auto-Matcher reconciliation"
           >
@@ -964,10 +964,10 @@ export default function SyllabusMatcherView() {
           <button
             onClick={() => setShowMatchReviewModal(true)}
             style={{
-              padding: '6px 14px',
+              padding: '7px 16px',
               borderRadius: '9999px',
-              border: '1px solid #E2E8F0',
-              background: '#FFFFFF',
+              border: '1px solid rgba(255, 255, 255, 0.8)',
+              background: '#EBEEF2',
               color: '#334155',
               fontSize: '12px',
               fontWeight: 600,
@@ -975,7 +975,7 @@ export default function SyllabusMatcherView() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+              boxShadow: '2px 2px 6px rgba(166, 175, 195, 0.4), -2px -2px 6px rgba(255, 255, 255, 0.8)'
             }}
             title="Review pending matcher candidates"
           >
@@ -1000,10 +1000,10 @@ export default function SyllabusMatcherView() {
           <button
             onClick={() => setShowReverseMatcherModal(true)}
             style={{
-              padding: '6px 14px',
+              padding: '7px 16px',
               borderRadius: '9999px',
-              border: '1px solid #E2E8F0',
-              background: '#FFFFFF',
+              border: '1px solid rgba(255, 255, 255, 0.8)',
+              background: '#EBEEF2',
               color: '#334155',
               fontSize: '12px',
               fontWeight: 600,
@@ -1011,31 +1011,27 @@ export default function SyllabusMatcherView() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+              boxShadow: '2px 2px 6px rgba(166, 175, 195, 0.4), -2px -2px 6px rgba(255, 255, 255, 0.8)'
             }}
             id="btn-open-reverse-matcher"
             title="Full Video Analytics: Reverse match YouTube video list"
           >
-            <Film size={13} style={{ color: '#4F46E5' }} />
+            <Film size={13} style={{ color: '#2F65F6' }} />
             <span>Full Video Analytics</span>
           </button>
 
           {/* Add Topics Button (Primary) */}
           <button
             onClick={() => setShowAddTopicsModal(true)}
+            className="soft-button-primary"
             style={{
-              padding: '6px 16px',
-              borderRadius: '9999px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
-              color: '#FFFFFF',
+              padding: '7px 18px',
               fontSize: '12px',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '5px',
-              boxShadow: '0 2px 6px rgba(124, 58, 237, 0.25)'
+              gap: '5px'
             }}
           >
             <Plus size={14} />
@@ -1053,11 +1049,11 @@ export default function SyllabusMatcherView() {
       }}>
         {/* Card 1: Channel Topic Reach */}
         <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          padding: '16px 18px',
-          border: '1px solid rgba(226, 232, 240, 0.8)',
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.03)',
+          background: '#F0F3F7',
+          borderRadius: '20px',
+          padding: '18px 20px',
+          border: '1px solid rgba(255, 255, 255, 0.8)',
+          boxShadow: '6px 6px 14px rgba(166, 175, 195, 0.55), -6px -6px 14px rgba(255, 255, 255, 0.85)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between'
@@ -1084,7 +1080,7 @@ export default function SyllabusMatcherView() {
             <div style={{
               height: '6px',
               width: '100%',
-              background: '#F1F5F9',
+              background: '#E6EAF0',
               borderRadius: '9999px',
               overflow: 'hidden'
             }}>
@@ -1105,11 +1101,11 @@ export default function SyllabusMatcherView() {
         {/* Card 2: Full Mastery */}
         <div
           style={{
-            background: '#FFFFFF',
-            borderRadius: '16px',
-            padding: '16px 18px',
-            border: '1px solid rgba(226, 232, 240, 0.8)',
-            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.03)',
+            background: '#F0F3F7',
+            borderRadius: '20px',
+            padding: '18px 20px',
+            border: '1px solid rgba(255, 255, 255, 0.8)',
+            boxShadow: '6px 6px 14px rgba(166, 175, 195, 0.55), -6px -6px 14px rgba(255, 255, 255, 0.85)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -1121,11 +1117,11 @@ export default function SyllabusMatcherView() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 800, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#2F65F6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Full Mastery
                 </span>
                 <span
-                  style={{ cursor: 'pointer', color: '#A78BFA', display: 'flex', alignItems: 'center' }}
+                  style={{ cursor: 'pointer', color: '#60A5FA', display: 'flex', alignItems: 'center' }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowCoverageTooltip(prev => !prev);
@@ -1135,7 +1131,7 @@ export default function SyllabusMatcherView() {
                   <Info size={13} />
                 </span>
               </div>
-              <span style={{ fontSize: '10px', background: '#EDE9FE', color: '#6D28D9', fontWeight: 700, padding: '1px 6px', borderRadius: '4px' }}>
+              <span style={{ fontSize: '10px', background: '#DBEAFE', color: '#1E40AF', fontWeight: 700, padding: '1px 6px', borderRadius: '4px' }}>
                 All 3 Formats
               </span>
             </div>
@@ -1157,14 +1153,14 @@ export default function SyllabusMatcherView() {
                 lineHeight: 1.45,
                 border: '1px solid rgba(255,255,255,0.1)'
               }}>
-                <div style={{ fontWeight: 800, color: '#C084FC', marginBottom: '4px', fontSize: '12px' }}>
+                <div style={{ fontWeight: 800, color: '#60A5FA', marginBottom: '4px', fontSize: '12px' }}>
                   Coverage Guide: Reach vs. Mastery
                 </div>
                 <div style={{ marginBottom: '4px' }}>
                   <b style={{ color: '#2DD4BF' }}>Topic Reach ({analytics.basic_coverage_pct || 0}%):</b> Topics with ≥1 video published in any format.
                 </div>
                 <div>
-                  <b style={{ color: '#A78BFA' }}>Full Mastery ({analytics.full_coverage_pct || 0}%):</b> Requires all 3 core formats (Discussion + Questions + Revision). Currently 0 topics have all 3 completed together.
+                  <b style={{ color: '#93C5FD' }}>Full Mastery ({analytics.full_coverage_pct || 0}%):</b> Requires all 3 core formats (Discussion + Questions + Revision). Currently 0 topics have all 3 completed together.
                 </div>
               </div>
             )}
@@ -1182,14 +1178,14 @@ export default function SyllabusMatcherView() {
             <div style={{
               height: '6px',
               width: '100%',
-              background: '#F1F5F9',
+              background: '#E6EAF0',
               borderRadius: '9999px',
               overflow: 'hidden'
             }}>
               <div style={{
                 height: '100%',
                 width: `${Math.min(100, Math.max(0, analytics.full_coverage_pct || 0))}%`,
-                background: 'linear-gradient(90deg, #7C3AED, #A855F7)',
+                background: 'linear-gradient(90deg, #2F65F6, #60A5FA)',
                 borderRadius: '9999px',
                 transition: 'width 0.4s ease'
               }} />
@@ -1202,11 +1198,11 @@ export default function SyllabusMatcherView() {
 
         {/* Card 3: Actionable Pipeline */}
         <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          padding: '16px 18px',
-          border: '1px solid rgba(226, 232, 240, 0.8)',
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.03)',
+          background: '#F0F3F7',
+          borderRadius: '20px',
+          padding: '18px 20px',
+          border: '1px solid rgba(255, 255, 255, 0.8)',
+          boxShadow: '6px 6px 14px rgba(166, 175, 195, 0.55), -6px -6px 14px rgba(255, 255, 255, 0.85)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between'
@@ -1216,7 +1212,7 @@ export default function SyllabusMatcherView() {
               <span style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Actionable Pipeline
               </span>
-              <span style={{ fontSize: '10px', background: '#F1F5F9', color: '#475569', fontWeight: 700, padding: '1px 6px', borderRadius: '4px' }}>
+              <span style={{ fontSize: '10px', background: '#E6EAF0', color: '#475569', fontWeight: 700, padding: '1px 6px', borderRadius: '4px' }}>
                 Content Status
               </span>
             </div>
@@ -1236,7 +1232,7 @@ export default function SyllabusMatcherView() {
               width: '100%',
               borderRadius: '9999px',
               overflow: 'hidden',
-              background: '#F1F5F9'
+              background: '#E6EAF0'
             }}>
               <div
                 style={{
@@ -1269,11 +1265,11 @@ export default function SyllabusMatcherView() {
 
       {/* 4. CONSOLIDATED COURSE TABS & FILTER TOOLBAR */}
       <div style={{
-        background: '#FFFFFF',
-        borderRadius: '16px',
-        padding: '12px 18px',
-        border: '1px solid rgba(226, 232, 240, 0.8)',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+        background: '#F0F3F7',
+        borderRadius: '20px',
+        padding: '14px 20px',
+        border: '1px solid rgba(255, 255, 255, 0.8)',
+        boxShadow: '6px 6px 14px rgba(166, 175, 195, 0.55), -6px -6px 14px rgba(255, 255, 255, 0.85)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -1282,7 +1278,15 @@ export default function SyllabusMatcherView() {
         marginBottom: '16px'
       }}>
         {/* Left: Primary Course Selector Tabs */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+        <div style={{
+          display: 'inline-flex',
+          background: '#E6EAF0',
+          padding: '4px',
+          borderRadius: '9999px',
+          boxShadow: 'inset 2px 2px 5px rgba(166, 175, 195, 0.5), inset -2px -2px 5px rgba(255, 255, 255, 0.8)',
+          gap: '4px',
+          flexWrap: 'wrap'
+        }}>
           <button
             onClick={() => setCourseFilter('ALL')}
             style={{
@@ -1293,8 +1297,9 @@ export default function SyllabusMatcherView() {
               border: 'none',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
-              background: courseFilter === 'ALL' ? '#0F172A' : '#F1F5F9',
-              color: courseFilter === 'ALL' ? '#FFFFFF' : '#475569'
+              background: courseFilter === 'ALL' ? 'linear-gradient(135deg, #3B72FF 0%, #1E56E3 100%)' : 'transparent',
+              color: courseFilter === 'ALL' ? '#FFFFFF' : '#64748B',
+              boxShadow: courseFilter === 'ALL' ? '0 2px 6px rgba(30, 86, 227, 0.3)' : 'none'
             }}
           >
             All Courses
@@ -1310,11 +1315,12 @@ export default function SyllabusMatcherView() {
                   borderRadius: '9999px',
                   fontSize: '12px',
                   fontWeight: 700,
-                  border: isSelected ? 'none' : '1px solid #E2E8F0',
+                  border: 'none',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
-                  background: isSelected ? '#7C3AED' : '#FFFFFF',
-                  color: isSelected ? '#FFFFFF' : '#475569'
+                  background: isSelected ? 'linear-gradient(135deg, #3B72FF 0%, #1E56E3 100%)' : 'transparent',
+                  color: isSelected ? '#FFFFFF' : '#64748B',
+                  boxShadow: isSelected ? '0 2px 6px rgba(30, 86, 227, 0.3)' : 'none'
                 }}
               >
                 {c.name}
@@ -1330,10 +1336,11 @@ export default function SyllabusMatcherView() {
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            background: '#F8FAFC',
-            border: '1px solid #CBD5E1',
+            background: '#E6EAF0',
+            border: 'none',
             borderRadius: '9999px',
-            padding: '5px 12px',
+            padding: '6px 14px',
+            boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.5), inset -2px -2px 4px rgba(255, 255, 255, 0.8)',
             minWidth: '180px'
           }}>
             <Search size={13} style={{ color: '#94A3B8' }} />
@@ -1358,14 +1365,16 @@ export default function SyllabusMatcherView() {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             style={{
-              padding: '6px 12px',
+              padding: '6px 14px',
               borderRadius: '9999px',
-              border: '1px solid #CBD5E1',
-              background: '#FFFFFF',
+              border: 'none',
+              background: '#E6EAF0',
+              boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.5), inset -2px -2px 4px rgba(255, 255, 255, 0.8)',
               fontSize: '12px',
               color: '#334155',
               fontWeight: 600,
-              outline: 'none'
+              outline: 'none',
+              cursor: 'pointer'
             }}
           >
             <option value="ALL">All Statuses</option>
@@ -1432,10 +1441,10 @@ export default function SyllabusMatcherView() {
 
       {/* SECTION 3: COVERAGE GRID TABLE */}
       <div style={{
-        background: '#FFFFFF',
-        borderRadius: '20px',
-        border: '1px solid rgba(226, 232, 240, 0.8)',
-        boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.04)',
+        background: '#F0F3F7',
+        borderRadius: '22px',
+        border: '1px solid rgba(255, 255, 255, 0.8)',
+        boxShadow: '6px 6px 18px rgba(166, 175, 195, 0.55), -6px -6px 18px rgba(255, 255, 255, 0.85)',
         overflow: 'hidden'
       }}>
         {isLoading ? (
@@ -1453,12 +1462,9 @@ export default function SyllabusMatcherView() {
             </p>
             <button
               onClick={() => setShowAddTopicsModal(true)}
+              className="soft-button-primary"
               style={{
-                padding: '8px 18px',
-                borderRadius: '9999px',
-                border: 'none',
-                background: '#7C3AED',
-                color: '#FFFFFF',
+                padding: '9px 20px',
                 fontSize: '13px',
                 fontWeight: 600,
                 cursor: 'pointer'
@@ -1794,26 +1800,19 @@ export default function SyllabusMatcherView() {
                                   title={`Plan next video for ${subject.name}`}
                                   style={{
                                     padding: '5px 12px',
-                                    borderRadius: '8px',
-                                    border: '1px solid #CBD5E1',
-                                    background: '#FFFFFF',
-                                    color: '#6D28D9',
+                                    borderRadius: '9999px',
+                                    border: '1px solid rgba(255, 255, 255, 0.8)',
+                                    background: '#EBEEF2',
+                                    color: '#2F65F6',
                                     fontSize: '11px',
                                     fontWeight: 700,
                                     cursor: 'pointer',
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     gap: '4px',
-                                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-                                    whiteSpace: 'nowrap'
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#F5F3FF';
-                                    e.currentTarget.style.borderColor = '#7C3AED';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#FFFFFF';
-                                    e.currentTarget.style.borderColor = '#CBD5E1';
+                                    boxShadow: '2px 2px 5px rgba(166, 175, 195, 0.4), -2px -2px 5px rgba(255, 255, 255, 0.8)',
+                                    whiteSpace: 'nowrap',
+                                    transition: 'all 0.15s ease'
                                   }}
                                 >
                                   <Plus size={12} />
@@ -1832,15 +1831,32 @@ export default function SyllabusMatcherView() {
                                 </tr>
                               ) : (
                                 topics.map((topic, tIdx) => {
+                                  const isRowActive = selectedItem?.id === topic.id;
                                   return (
                                     <tr
                                       key={topic.id}
+                                      onClick={(e) => {
+                                        if (e.target.closest('button, input, select, a')) return;
+                                        onSelectItem && onSelectItem({
+                                          id: topic.id,
+                                          title: topic.name,
+                                          name: topic.name,
+                                          course_name: course.name,
+                                          subject_name: subject.name,
+                                          formats: topic.formats,
+                                          notes: topic.notes,
+                                          item_type: 'Syllabus Topic'
+                                        });
+                                      }}
                                       style={{
                                         borderBottom: '1px solid #F1F5F9',
-                                        transition: 'background-color 0.15s ease'
+                                        transition: 'background-color 0.15s ease',
+                                        cursor: 'pointer',
+                                        background: isRowActive ? 'rgba(47, 101, 246, 0.08)' : undefined,
+                                        borderLeft: isRowActive ? '3px solid #2F65F6' : undefined
                                       }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FBFDFF'}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                      onMouseEnter={(e) => { if (!isRowActive) e.currentTarget.style.backgroundColor = '#FBFDFF'; }}
+                                      onMouseLeave={(e) => { if (!isRowActive) e.currentTarget.style.backgroundColor = 'transparent'; }}
                                     >
                                       {/* Col 1: Topic Name */}
                                       <td style={{ padding: '10px 16px 10px 48px' }}>
@@ -1927,25 +1943,18 @@ export default function SyllabusMatcherView() {
                                           title={`Plan video for ${topic.name}`}
                                           style={{
                                             padding: '5px 12px',
-                                            borderRadius: '8px',
-                                            border: '1px solid #CBD5E1',
-                                            background: '#FFFFFF',
-                                            color: '#6D28D9',
+                                            borderRadius: '9999px',
+                                            border: '1px solid rgba(255, 255, 255, 0.8)',
+                                            background: '#EBEEF2',
+                                            color: '#2F65F6',
                                             fontSize: '11px',
                                             fontWeight: 600,
                                             cursor: 'pointer',
                                             display: 'inline-flex',
                                             alignItems: 'center',
                                             gap: '4px',
-                                            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-                                          }}
-                                          onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#F5F3FF';
-                                            e.currentTarget.style.borderColor = '#7C3AED';
-                                          }}
-                                          onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#FFFFFF';
-                                            e.currentTarget.style.borderColor = '#CBD5E1';
+                                            boxShadow: '2px 2px 5px rgba(166, 175, 195, 0.4), -2px -2px 5px rgba(255, 255, 255, 0.8)',
+                                            transition: 'all 0.15s ease'
                                           }}
                                         >
                                           <Plus size={12} />

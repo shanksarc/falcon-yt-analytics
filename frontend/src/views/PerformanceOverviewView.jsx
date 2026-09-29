@@ -30,31 +30,35 @@ const styles = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
-    padding: '8px 14px',
+    padding: '8px 16px',
     borderRadius: '9999px',
     fontSize: '0.8rem',
-    fontWeight: 500,
-    color: '#64748B',
-    background: 'transparent',
-    border: '1px solid transparent',
+    fontWeight: 600,
+    color: '#1E293B',
+    background: '#E6EAF0',
+    border: 'none',
+    boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.8)',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
     fontFamily: 'inherit',
   },
   kpiCard: {
-    background: '#FFFFFF',
-    border: '1px solid #E8ECF1',
-    borderRadius: '16px',
-    boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.04)',
+    background: '#F0F3F7',
+    border: '1px solid rgba(255, 255, 255, 0.6)',
+    borderRadius: '20px',
+    boxShadow: '6px 6px 14px rgba(166, 175, 195, 0.55), -6px -6px 14px rgba(255, 255, 255, 0.85)',
     padding: '20px 22px',
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',
+    transition: 'all 0.2s ease',
   },
   kpiLabel: {
-    fontSize: '0.8rem',
+    fontSize: '0.75rem',
     color: '#64748B',
-    fontWeight: 500,
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
   },
   kpiValue: {
     fontSize: '1.75rem',
@@ -63,16 +67,17 @@ const styles = {
     letterSpacing: '-0.02em',
   },
   kpiSub: {
-    fontSize: '0.78rem',
-    color: '#94A3B8',
+    fontSize: '0.75rem',
+    color: '#64748B',
   },
   contentCard: {
-    background: '#FFFFFF',
-    border: '1px solid #E8ECF1',
-    borderRadius: '16px',
-    boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.04)',
+    background: '#F0F3F7',
+    border: '1px solid rgba(255, 255, 255, 0.6)',
+    borderRadius: '22px',
+    boxShadow: '6px 6px 14px rgba(166, 175, 195, 0.55), -6px -6px 14px rgba(255, 255, 255, 0.85)',
     padding: '24px',
     marginBottom: '0',
+    transition: 'all 0.2s ease',
   },
   contentCardHeader: {
     display: 'flex',
@@ -84,14 +89,24 @@ const styles = {
   },
   blockCard: {
     background: '#FFFFFF',
-    border: '1px solid #E8ECF1',
-    borderRadius: '16px',
-    boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.04)',
+    border: '1px solid rgba(255, 255, 255, 0.8)',
+    borderRadius: '18px',
+    boxShadow: '4px 4px 12px rgba(166, 175, 195, 0.35), -4px -4px 12px rgba(255, 255, 255, 0.85)',
     padding: '20px',
     cursor: 'pointer',
-    transition: 'all 0.15s ease',
+    transition: 'all 0.2s ease',
   },
 };
+
+function formatCourseName(name) {
+  if (!name) return '';
+  return name
+    .replace(/CFA\s*Level\s*1/i, 'CFA L1')
+    .replace(/CFA\s*Level\s*2/i, 'CFA L2')
+    .replace(/CFA\s*Level\s*3/i, 'CFA L3')
+    .replace(/FRM\s*Part\s*1/i, 'FRM P1')
+    .replace(/FRM\s*Part\s*2/i, 'FRM P2');
+}
 
 export default function PerformanceOverviewView({ onNavigateDrilldown }) {
   const [summary, setSummary] = useState(null);
@@ -154,7 +169,6 @@ export default function PerformanceOverviewView({ onNavigateDrilldown }) {
         <div style={styles.sectionHeader}>
           <div>
             <h2 style={styles.sectionTitle}>Channel Summary</h2>
-            <p style={styles.sectionSubtitle}>Aggregate performance across your entire channel</p>
           </div>
           <button 
             style={styles.ghostBtn}
@@ -170,33 +184,33 @@ export default function PerformanceOverviewView({ onNavigateDrilldown }) {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '16px' }}>
           <div style={styles.kpiCard}>
-            <div style={styles.kpiLabel}>Channel views</div>
-            <div style={styles.kpiValue} title={`${summary?.total_views?.toLocaleString() || 0} total views`}>
+            <div style={styles.kpiLabel}>Views</div>
+            <div style={styles.kpiValue}>
               {formatNum(summary?.total_views)}
             </div>
-            <div style={{ ...styles.kpiSub, color: '#0D9488', fontWeight: 500 }}>
-              {summary?.total_views ? `${summary.total_views.toLocaleString()} total views` : `+${summary?.yoy_growth_pct}% YoY`}
+            <div style={{ ...styles.kpiSub, color: '#0D9488', fontWeight: 600 }}>
+              {summary?.yoy_growth_pct !== undefined ? `+${summary.yoy_growth_pct}% YoY` : 'Total Views'}
             </div>
           </div>
 
           <div style={styles.kpiCard}>
-            <div style={styles.kpiLabel}>Watch time</div>
+            <div style={styles.kpiLabel}>Watch Time</div>
             <div style={styles.kpiValue}>{formatNum(summary?.total_watch_time)}h</div>
-            <div style={styles.kpiSub}>Total watch hours</div>
+            <div style={styles.kpiSub}>Across channel</div>
           </div>
 
           <div style={styles.kpiCard}>
             <div style={styles.kpiLabel}>Subscribers</div>
-            <div style={styles.kpiValue} title={`${summary?.total_subscribers?.toLocaleString() || 0} subscribers`}>
+            <div style={styles.kpiValue}>
               {formatNum(summary?.total_subscribers)}
             </div>
-            <div style={styles.kpiSub}>{summary?.total_subscribers?.toLocaleString() || 0} total subscribers</div>
+            <div style={styles.kpiSub}>Audience base</div>
           </div>
 
           <div style={styles.kpiCard}>
-            <div style={styles.kpiLabel}>Average CTR & retention</div>
+            <div style={styles.kpiLabel}>Avg CTR & Retention</div>
             <div style={styles.kpiValue}>{summary?.avg_ctr}%</div>
-            <div style={styles.kpiSub}>{Math.round((summary?.avg_view_duration || 0) / 60)} min avg retention</div>
+            <div style={styles.kpiSub}>{Math.round((summary?.avg_view_duration || 0) / 60)} min avg duration</div>
           </div>
         </div>
       </div>
@@ -208,7 +222,6 @@ export default function PerformanceOverviewView({ onNavigateDrilldown }) {
         <div style={styles.contentCardHeader}>
           <div>
             <h2 style={styles.sectionTitle}>Course-wise Performance</h2>
-            <p style={styles.sectionSubtitle}>Click any block to drill down into individual videos</p>
           </div>
         </div>
 
@@ -218,12 +231,12 @@ export default function PerformanceOverviewView({ onNavigateDrilldown }) {
               key={course.id}
               style={styles.blockCard}
               onClick={() => onNavigateDrilldown({ type: 'list', id: course.id })}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.boxShadow = '0 8px 30px -4px rgba(0, 0, 0, 0.08)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E8ECF1'; e.currentTarget.style.boxShadow = '0 4px 24px -4px rgba(0, 0, 0, 0.04)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.boxShadow = '0 6px 20px -3px rgba(0, 0, 0, 0.06)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.03)'; }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1E293B' }}>
-                  {course.name}
+                  {formatCourseName(course.name)}
                 </span>
                 <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
                   {course.stats?.video_count || 0} videos
@@ -241,11 +254,6 @@ export default function PerformanceOverviewView({ onNavigateDrilldown }) {
                   +{course.stats?.yoy_views_growth}% YoY
                 </div>
               </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', fontSize: '0.75rem', color: '#7C3AED', marginTop: '12px', fontWeight: 600 }}>
-                <span>Drill down</span>
-                <ChevronRight size={14} />
-              </div>
             </div>
           ))}
         </div>
@@ -258,7 +266,6 @@ export default function PerformanceOverviewView({ onNavigateDrilldown }) {
         <div style={styles.contentCardHeader}>
           <div>
             <h2 style={styles.sectionTitle}>Customizable List Blocks</h2>
-            <p style={styles.sectionSubtitle}>Pin your most-tracked playlists for quick comparison</p>
           </div>
 
           <button 
@@ -284,8 +291,8 @@ export default function PerformanceOverviewView({ onNavigateDrilldown }) {
                 key={l.id}
                 style={styles.blockCard}
                 onClick={() => onNavigateDrilldown({ type: 'list', id: l.id })}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.boxShadow = '0 8px 30px -4px rgba(0, 0, 0, 0.08)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E8ECF1'; e.currentTarget.style.boxShadow = '0 4px 24px -4px rgba(0, 0, 0, 0.04)'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.boxShadow = '0 6px 20px -3px rgba(0, 0, 0, 0.06)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.03)'; }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <span style={{ fontWeight: 600, fontSize: '0.875rem', color: '#1E293B' }}>{l.name}</span>
@@ -301,11 +308,6 @@ export default function PerformanceOverviewView({ onNavigateDrilldown }) {
                   <span>Watch: {formatNum(l.stats?.total_watch_time)}h</span>
                   <span style={{ color: '#0D9488', fontWeight: 500 }}>+{l.stats?.yoy_views_growth}% YoY</span>
                 </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', fontSize: '0.75rem', color: '#7C3AED', marginTop: '12px', fontWeight: 600 }}>
-                  <span>Drill down</span>
-                  <ChevronRight size={14} />
-                </div>
               </div>
             ))}
           </div>
@@ -316,15 +318,14 @@ export default function PerformanceOverviewView({ onNavigateDrilldown }) {
       {/* Section 04 — Monthly Time Series (Channel-Wide YoY)            */}
       {/* ------------------------------------------------------------- */}
       <div>
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: '16px' }}>
           <h2 style={styles.sectionTitle}>Monthly Time Series (Channel-Wide)</h2>
-          <p style={styles.sectionSubtitle}>12-month YoY comparison across the entire channel</p>
         </div>
 
         <YoYTrendChart 
           trendData={channelTrend}
-          title="Channel-wide 12-month performance (YoY)"
-          subtitle="Monthly progress across entire channel compared against the same month of the previous year"
+          title="Channel-wide 12-Month Performance (YoY)"
+          subtitle=""
         />
       </div>
 

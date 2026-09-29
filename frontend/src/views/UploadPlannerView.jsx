@@ -81,7 +81,7 @@ function getStatusColor(pacing) {
   }
 }
 
-export default function UploadPlannerView() {
+export default function UploadPlannerView({ onSelectItem, selectedItem }) {
   const [overview, setOverview] = useState(null);
   const [selectedSessionId, setSelectedSessionId] = useState(() => {
     return localStorage.getItem('falcon_planner_active_session') || null;
@@ -95,7 +95,19 @@ export default function UploadPlannerView() {
   const [isReviewBannerExpanded, setIsReviewBannerExpanded] = useState(true);
   const [showSeasonalityInfo, setShowSeasonalityInfo] = useState(false);
   const [showSeasonalityBanner, setShowSeasonalityBanner] = useState(true);
+  const [showPlanMenu, setShowPlanMenu] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const formatSessionName = (name) => {
+    if (!name) return '';
+    return name
+      .replace(/CFA\s+Feb\s+2027\s+Exam\s+Window/i, "Feb '27 Window")
+      .replace(/CFA\s+Nov\s+2026\s+Exam\s+Window/i, "Nov '26 Window")
+      .replace(/FRM\s+Nov\s+2026\s+Exam\s+Window/i, "FRM Nov '26 Window")
+      .replace(/CFA\s+May\s+2027\s+Exam\s+Window/i, "May '27 Window")
+      .replace(/\s*Exam\s*Window/gi, ' Window')
+      .trim();
+  };
 
   // Consolidated 4-Card KPI Metric Section stats
   const kpiStats = useMemo(() => {
@@ -521,7 +533,7 @@ export default function UploadPlannerView() {
                 }}
               >
                 <PlannerStatusIcon status={pacing.status} color={statusColor} size={13} />
-                <span>{sess.name}</span>
+                <span>{formatSessionName(sess.name)}</span>
                 {sess.target > 0 && (
                   <span style={{
                     fontSize: '0.7rem',
@@ -582,13 +594,18 @@ export default function UploadPlannerView() {
 
       {/* 2. Top Bar: Header & Consolidated Actions */}
       <div className="planner-top-bar flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <h1 className="text-2xl font-bold tracking-tight text-slate-800" style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: '#1E293B' }}>Upload Planner</h1>
-          <p className="text-sm text-slate-500" style={{ fontSize: '0.875rem', color: '#64748B', margin: '4px 0 0' }}>Track pacing toward exam targets, allocate uploads, and manage lecture pipeline.</p>
+          <span 
+            title="Track pacing toward exam targets, allocate uploads, and manage lecture pipeline"
+            style={{ display: 'inline-flex', alignItems: 'center', color: '#94A3B8', cursor: 'help' }}
+          >
+            <Info size={15} />
+          </span>
         </div>
 
-        {/* Action Controls - Floating Capsule Style */}
-        <div className="planner-action-controls flex items-center gap-2" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        {/* Action Controls - Consolidated Primary CTA with Dropdown */}
+        <div className="planner-action-controls flex items-center gap-2.5" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           {/* Secondary Actions Group */}
           <div className="planner-secondary-actions flex items-center bg-white border border-slate-200/80 rounded-full shadow-xs p-0.5" style={{ display: 'flex', alignItems: 'center', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '9999px', padding: '2px' }}>
             <button 
@@ -596,85 +613,120 @@ export default function UploadPlannerView() {
               id="btn-trigger-auto-match"
               title="Run title similarity matcher against channel uploads"
               className="planner-secondary-btn flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-full transition"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.75rem', background: 'transparent', border: 'none', color: '#475569', cursor: 'pointer', borderRadius: '9999px' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', fontSize: '0.75rem', background: 'transparent', border: 'none', color: '#475569', cursor: 'pointer', borderRadius: '9999px' }}
             >
-              <UploadCloud className="w-3.5 h-3.5 text-slate-500" style={{ width: '14px', height: '14px' }} />
+              <UploadCloud className="w-3.5 h-3.5 text-slate-500" style={{ width: '13px', height: '13px' }} />
               <span>Scan</span>
-            </button>
-            <button 
-              onClick={() => setShowBulkImport(true)}
-              id="btn-bulk-import-top"
-              title="Bulk import planned videos via CSV / text"
-              className="planner-secondary-btn flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-full transition"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.75rem', background: 'transparent', border: 'none', color: '#475569', cursor: 'pointer', borderRadius: '9999px' }}
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-slate-500" style={{ width: '14px', height: '14px' }} />
-              <span>Bulk Import</span>
             </button>
             <button 
               onClick={() => setShowTargetModal(true)}
               id="btn-target-management-top"
               title="Set and reconcile total, program, course, and subject targets"
               className="planner-secondary-btn flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-50 rounded-full transition"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.75rem', background: 'transparent', border: 'none', color: '#475569', cursor: 'pointer', borderRadius: '9999px' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '6px 12px', fontSize: '0.75rem', background: 'transparent', border: 'none', color: '#475569', cursor: 'pointer', borderRadius: '9999px' }}
             >
-              <Target className="w-3.5 h-3.5 text-slate-500" style={{ width: '14px', height: '14px' }} />
+              <Target className="w-3.5 h-3.5 text-slate-500" style={{ width: '13px', height: '13px' }} />
               <span>Targets</span>
             </button>
           </div>
 
-          {/* Primary Action Button Group */}
-          <button 
-            onClick={() => {
-              setEditingPlannedVideo(null);
-              setShowPlannedModal(true);
-            }}
-            id="btn-plan-video-top"
-            className="planner-btn-plan-video flex items-center gap-1.5 px-4 py-2 bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-xs font-semibold rounded-full shadow-sm transition"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#7C3AED', color: '#fff', fontSize: '0.75rem', fontWeight: 600, borderRadius: '9999px', border: 'none', cursor: 'pointer', boxShadow: '0 2px 6px -1px rgba(124, 58, 237, 0.35)' }}
-          >
-            <Plus className="w-4 h-4" style={{ width: '16px', height: '16px' }} />
-            <span>Plan Video</span>
-          </button>
+          {/* Consolidated Primary CTA with Dropdown Chevron */}
+          <div style={{ position: 'relative', display: 'inline-flex' }}>
+            <div style={{ display: 'inline-flex', borderRadius: '9999px', overflow: 'hidden', boxShadow: '4px 6px 12px rgba(30, 86, 227, 0.35)' }}>
+              <button 
+                onClick={() => {
+                  setEditingPlannedVideo(null);
+                  setShowPlannedModal(true);
+                }}
+                id="btn-plan-video-top"
+                className="soft-button-primary"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', fontSize: '0.78rem', fontWeight: 600, border: 'none', cursor: 'pointer', borderRadius: 0 }}
+              >
+                <Plus className="w-4 h-4" style={{ width: '15px', height: '15px' }} />
+                <span>Plan Video</span>
+              </button>
+              <button
+                onClick={() => setShowPlanMenu(prev => !prev)}
+                title="More creation options"
+                style={{ display: 'inline-flex', alignItems: 'center', padding: '8px 10px', background: '#1E56E3', color: '#fff', border: 'none', borderLeft: '1px solid rgba(255,255,255,0.25)', cursor: 'pointer' }}
+              >
+                <ChevronDown size={14} />
+              </button>
+            </div>
 
-          <button 
-            onClick={() => {
-              setEditingShort(null);
-              setShowPlanShortModal(true);
-            }}
-            id="btn-plan-short-top"
-            className="planner-btn-plan-short flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-full border border-slate-200/80 shadow-xs transition"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#FFFFFF', color: '#334155', fontSize: '0.75rem', fontWeight: 500, borderRadius: '9999px', border: '1px solid #E2E8F0', cursor: 'pointer' }}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" style={{ width: '14px', height: '14px', color: '#F59E0B' }} />
-            <span>Plan Short</span>
-          </button>
+            {showPlanMenu && (
+              <>
+                <div 
+                  onClick={() => setShowPlanMenu(false)} 
+                  style={{ position: 'fixed', inset: 0, zIndex: 40 }} 
+                />
+                <div style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: '110%',
+                  zIndex: 50,
+                  background: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+                  padding: '6px',
+                  minWidth: '160px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '2px'
+                }}>
+                  <button
+                    onClick={() => {
+                      setShowPlanMenu(false);
+                      setEditingShort(null);
+                      setShowPlanShortModal(true);
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '0.75rem', fontWeight: 500, color: '#334155', background: 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', textAlign: 'left' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#F8FAFC'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <Sparkles size={13} color="#EA580C" />
+                    <span>Plan Short</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowPlanMenu(false);
+                      setShowBulkImport(true);
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '0.75rem', fontWeight: 500, color: '#334155', background: 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', textAlign: 'left' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#F8FAFC'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <FileSpreadsheet size={13} color="#64748B" />
+                    <span>Bulk Import</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* 3. Sub-Navigation: Floating Capsule Tabs */}
-      <div className="planner-subnav-strip flex border-b border-slate-200/80" style={{ display: 'flex', borderBottom: '1px solid #E2E8F0', width: '100%', paddingBottom: '4px' }}>
-        <nav className="flex space-x-1" aria-label="Tabs" style={{ display: 'flex', gap: '6px' }}>
+      {/* 3. Sub-Navigation: Soft-Inset Segmented Pill Bar */}
+      <div className="planner-subnav-strip" style={{ display: 'inline-flex', background: '#E6EAF0', borderRadius: '9999px', padding: '4px', boxShadow: 'inset 2px 2px 5px rgba(166, 175, 195, 0.5), inset -2px -2px 5px rgba(255, 255, 255, 0.8)', border: 'none', alignSelf: 'flex-start' }}>
+        <nav style={{ display: 'flex', gap: '4px' }} aria-label="Tabs">
           <button
             onClick={() => setActiveViewTab('progress')}
             id="tab-progress-analytics"
-            className={`planner-subnav-tab flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-full transition ${
-              activeViewTab === 'progress' || activeViewTab === 'analytics'
-                ? 'active bg-[#F3EEFF] text-[#7C3AED] border border-purple-200/60 font-semibold shadow-xs'
-                : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100/70'
-            }`}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '7px',
-              padding: '7px 14px',
+              padding: '7px 16px',
               fontSize: '0.78rem',
               borderRadius: '9999px',
-              border: (activeViewTab === 'progress' || activeViewTab === 'analytics') ? '1px solid rgba(124, 58, 237, 0.25)' : '1px solid transparent',
-              background: (activeViewTab === 'progress' || activeViewTab === 'analytics') ? '#F3EEFF' : 'transparent',
-              color: (activeViewTab === 'progress' || activeViewTab === 'analytics') ? '#7C3AED' : '#64748B',
-              fontWeight: (activeViewTab === 'progress' || activeViewTab === 'analytics') ? 600 : 500,
-              cursor: 'pointer'
+              border: 'none',
+              background: (activeViewTab === 'progress' || activeViewTab === 'analytics') ? '#2F65F6' : 'transparent',
+              color: (activeViewTab === 'progress' || activeViewTab === 'analytics') ? '#FFFFFF' : '#64748B',
+              boxShadow: (activeViewTab === 'progress' || activeViewTab === 'analytics') ? '0 2px 8px rgba(47, 101, 246, 0.35)' : 'none',
+              fontWeight: (activeViewTab === 'progress' || activeViewTab === 'analytics') ? 700 : 500,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
             }}
           >
             <BarChart3 className="w-3.5 h-3.5" style={{ width: '14px', height: '14px' }} />
@@ -683,51 +735,45 @@ export default function UploadPlannerView() {
           <button
             onClick={() => setActiveViewTab('videos')}
             id="tab-full-video-list"
-            className={`planner-subnav-tab flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-full transition ${
-              activeViewTab === 'videos'
-                ? 'active bg-[#F3EEFF] text-[#7C3AED] border border-purple-200/60 font-semibold shadow-xs'
-                : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100/70'
-            }`}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '7px',
-              padding: '7px 14px',
+              padding: '7px 16px',
               fontSize: '0.78rem',
               borderRadius: '9999px',
-              border: activeViewTab === 'videos' ? '1px solid rgba(124, 58, 237, 0.25)' : '1px solid transparent',
-              background: activeViewTab === 'videos' ? '#F3EEFF' : 'transparent',
-              color: activeViewTab === 'videos' ? '#7C3AED' : '#64748B',
-              fontWeight: activeViewTab === 'videos' ? 600 : 500,
-              cursor: 'pointer'
+              border: 'none',
+              background: activeViewTab === 'videos' ? '#2F65F6' : 'transparent',
+              color: activeViewTab === 'videos' ? '#FFFFFF' : '#64748B',
+              boxShadow: activeViewTab === 'videos' ? '0 2px 8px rgba(47, 101, 246, 0.35)' : 'none',
+              fontWeight: activeViewTab === 'videos' ? 700 : 500,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
             }}
           >
             <ListVideo className="w-3.5 h-3.5" style={{ width: '14px', height: '14px' }} />
             <span>Full Video List</span>
-            <span className="planner-tab-counter px-1.5 py-0.5 rounded-full text-[10px]" style={{ padding: '2px 7px', background: activeViewTab === 'videos' ? 'rgba(124, 58, 237, 0.18)' : '#F1F5F9', color: activeViewTab === 'videos' ? '#7C3AED' : '#64748B', borderRadius: '9999px', fontSize: '10px', fontWeight: 600 }}>
+            <span style={{ padding: '2px 7px', background: activeViewTab === 'videos' ? 'rgba(255, 255, 255, 0.25)' : '#CBD5E1', color: activeViewTab === 'videos' ? '#FFFFFF' : '#475569', borderRadius: '9999px', fontSize: '10px', fontWeight: 600 }}>
               {allPlannedVideos.length}
             </span>
           </button>
           <button
             onClick={() => setActiveViewTab('schedule')}
             id="tab-weekly-schedule"
-            className={`planner-subnav-tab flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-full transition ${
-              activeViewTab === 'schedule'
-                ? 'active bg-[#F3EEFF] text-[#7C3AED] border border-purple-200/60 font-semibold shadow-xs'
-                : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100/70'
-            }`}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '7px',
-              padding: '7px 14px',
+              padding: '7px 16px',
               fontSize: '0.78rem',
               borderRadius: '9999px',
-              border: activeViewTab === 'schedule' ? '1px solid rgba(124, 58, 237, 0.25)' : '1px solid transparent',
-              background: activeViewTab === 'schedule' ? '#F3EEFF' : 'transparent',
-              color: activeViewTab === 'schedule' ? '#7C3AED' : '#64748B',
-              fontWeight: activeViewTab === 'schedule' ? 600 : 500,
-              cursor: 'pointer'
+              border: 'none',
+              background: activeViewTab === 'schedule' ? '#2F65F6' : 'transparent',
+              color: activeViewTab === 'schedule' ? '#FFFFFF' : '#64748B',
+              boxShadow: activeViewTab === 'schedule' ? '0 2px 8px rgba(47, 101, 246, 0.35)' : 'none',
+              fontWeight: activeViewTab === 'schedule' ? 700 : 500,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
             }}
           >
             <Calendar className="w-3.5 h-3.5" style={{ width: '14px', height: '14px' }} />
@@ -736,57 +782,51 @@ export default function UploadPlannerView() {
           <button
             onClick={() => setActiveViewTab('shorts')}
             id="tab-shorts-hub"
-            className={`planner-subnav-tab flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-full transition ${
-              activeViewTab === 'shorts'
-                ? 'active bg-[#F3EEFF] text-[#7C3AED] border border-purple-200/60 font-semibold shadow-xs'
-                : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100/70'
-            }`}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '7px',
-              padding: '7px 14px',
+              padding: '7px 16px',
               fontSize: '0.78rem',
               borderRadius: '9999px',
-              border: activeViewTab === 'shorts' ? '1px solid rgba(124, 58, 237, 0.25)' : '1px solid transparent',
-              background: activeViewTab === 'shorts' ? '#F3EEFF' : 'transparent',
-              color: activeViewTab === 'shorts' ? '#7C3AED' : '#64748B',
-              fontWeight: activeViewTab === 'shorts' ? 600 : 500,
-              cursor: 'pointer'
+              border: 'none',
+              background: activeViewTab === 'shorts' ? '#2F65F6' : 'transparent',
+              color: activeViewTab === 'shorts' ? '#FFFFFF' : '#64748B',
+              boxShadow: activeViewTab === 'shorts' ? '0 2px 8px rgba(47, 101, 246, 0.35)' : 'none',
+              fontWeight: activeViewTab === 'shorts' ? 700 : 500,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
             }}
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" style={{ width: '14px', height: '14px', color: '#F59E0B' }} />
+            <Sparkles className="w-3.5 h-3.5" style={{ width: '14px', height: '14px', color: activeViewTab === 'shorts' ? '#FDE047' : '#EA580C' }} />
             <span>Shorts Hub</span>
-            <span className="planner-tab-counter px-1.5 py-0.5 rounded-full text-[10px]" style={{ padding: '2px 7px', background: activeViewTab === 'shorts' ? 'rgba(124, 58, 237, 0.18)' : '#F1F5F9', color: activeViewTab === 'shorts' ? '#7C3AED' : '#64748B', borderRadius: '9999px', fontSize: '10px', fontWeight: 600 }}>
+            <span style={{ padding: '2px 7px', background: activeViewTab === 'shorts' ? 'rgba(255, 255, 255, 0.25)' : '#CBD5E1', color: activeViewTab === 'shorts' ? '#FFFFFF' : '#475569', borderRadius: '9999px', fontSize: '10px', fontWeight: 600 }}>
               {shortsCount}
             </span>
           </button>
           <button
             onClick={() => setActiveViewTab('manage')}
             id="tab-manage-plan"
-            className={`planner-subnav-tab flex items-center gap-2 px-3.5 py-1.5 text-xs font-medium rounded-full transition ${
-              activeViewTab === 'manage'
-                ? 'active bg-[#F3EEFF] text-[#7C3AED] border border-purple-200/60 font-semibold shadow-xs'
-                : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-100/70'
-            }`}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '7px',
-              padding: '7px 14px',
+              padding: '7px 16px',
               fontSize: '0.78rem',
               borderRadius: '9999px',
-              border: activeViewTab === 'manage' ? '1px solid rgba(124, 58, 237, 0.25)' : '1px solid transparent',
-              background: activeViewTab === 'manage' ? '#F3EEFF' : 'transparent',
-              color: activeViewTab === 'manage' ? '#7C3AED' : '#64748B',
-              fontWeight: activeViewTab === 'manage' ? 600 : 500,
-              cursor: 'pointer'
+              border: 'none',
+              background: activeViewTab === 'manage' ? '#2F65F6' : 'transparent',
+              color: activeViewTab === 'manage' ? '#FFFFFF' : '#64748B',
+              boxShadow: activeViewTab === 'manage' ? '0 2px 8px rgba(47, 101, 246, 0.35)' : 'none',
+              fontWeight: activeViewTab === 'manage' ? 700 : 500,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
             }}
           >
             <SlidersHorizontal className="w-3.5 h-3.5" style={{ width: '14px', height: '14px' }} />
             <span>Manage Plan</span>
             {reviewQueue.length > 0 && (
-              <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300/60 rounded-full text-[10px] font-semibold" style={{ padding: '2px 8px', borderRadius: '9999px', fontSize: '10px' }}>
+              <span style={{ padding: '2px 8px', borderRadius: '9999px', fontSize: '10px', fontWeight: 700, background: activeViewTab === 'manage' ? '#FFFFFF' : '#EA580C', color: activeViewTab === 'manage' ? '#2F65F6' : '#FFFFFF' }}>
                 {reviewQueue.length}
               </span>
             )}
@@ -802,17 +842,17 @@ export default function UploadPlannerView() {
           onClick={() => setActiveViewTab('videos')}
           title="View Lecture videos"
           style={{
-            borderRadius: '16px',
+            borderRadius: '20px',
             padding: '20px',
-            border: '1px solid rgba(226, 232, 240, 0.8)',
-            boxShadow: '0 2px 12px -3px rgba(0,0,0,0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.7)',
+            boxShadow: '6px 6px 14px rgba(166, 175, 195, 0.45), -6px -6px 14px rgba(255, 255, 255, 0.85)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
             background: '#EBFBF7',
             gap: '14px',
             cursor: 'pointer',
-            transition: 'all 0.15s ease',
+            transition: 'all 0.2s ease',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -845,17 +885,17 @@ export default function UploadPlannerView() {
           onClick={() => setActiveViewTab('shorts')}
           title="View Shorts Hub"
           style={{
-            borderRadius: '16px',
+            borderRadius: '20px',
             padding: '20px',
-            border: '1px solid rgba(226, 232, 240, 0.8)',
-            boxShadow: '0 2px 12px -3px rgba(0,0,0,0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.7)',
+            boxShadow: '6px 6px 14px rgba(166, 175, 195, 0.45), -6px -6px 14px rgba(255, 255, 255, 0.85)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
             background: '#FFF5ED',
             gap: '14px',
             cursor: 'pointer',
-            transition: 'all 0.15s ease',
+            transition: 'all 0.2s ease',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -888,17 +928,17 @@ export default function UploadPlannerView() {
           onClick={() => setActiveViewTab('videos')}
           title="View Pipeline Backlog"
           style={{
-            borderRadius: '16px',
+            borderRadius: '20px',
             padding: '20px',
-            border: '1px solid rgba(226, 232, 240, 0.8)',
-            boxShadow: '0 2px 12px -3px rgba(0,0,0,0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.7)',
+            boxShadow: '6px 6px 14px rgba(166, 175, 195, 0.45), -6px -6px 14px rgba(255, 255, 255, 0.85)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
             background: '#F3EEFF',
             gap: '14px',
             cursor: 'pointer',
-            transition: 'all 0.15s ease',
+            transition: 'all 0.2s ease',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -911,7 +951,6 @@ export default function UploadPlannerView() {
             <div style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em', color: '#1E293B' }}>
               {kpiStats.totalBacklog} <span style={{ fontSize: '0.85rem', fontWeight: 400, color: '#64748B' }}>Items</span>
             </div>
-            <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0' }}>Pending editor review & release scheduling</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#64748B', paddingTop: '8px', borderTop: '1px solid rgba(124, 58, 237, 0.15)' }}>
             <span style={{ color: '#7C3AED', fontWeight: 600 }}>{kpiStats.inProdCount} in production</span>
@@ -923,10 +962,10 @@ export default function UploadPlannerView() {
         {/* Tile 4: Soft Rose - Upload Velocity */}
         <div 
           style={{
-            borderRadius: '16px',
+            borderRadius: '20px',
             padding: '20px',
-            border: '1px solid rgba(226, 232, 240, 0.8)',
-            boxShadow: '0 2px 12px -3px rgba(0,0,0,0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.7)',
+            boxShadow: '6px 6px 14px rgba(166, 175, 195, 0.45), -6px -6px 14px rgba(255, 255, 255, 0.85)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -1252,6 +1291,8 @@ export default function UploadPlannerView() {
             sessions={overview?.sessions || []}
             lists={allLists}
             onRefresh={refreshAll}
+            onSelectItem={onSelectItem}
+            selectedItem={selectedItem}
             onEditVideo={(pv) => {
               setEditingPlannedVideo(pv);
               setShowPlannedModal(true);
@@ -1767,8 +1808,20 @@ export default function UploadPlannerView() {
                     </thead>
                     <tbody>
                       {displayPlannedVideos.map((pv) => {
+                        const isRowSelected = selectedItem?.id === pv.id;
                         return (
-                          <tr key={pv.id}>
+                          <tr
+                            key={pv.id}
+                            onClick={(e) => {
+                              if (e.target.closest('button, select, input, a')) return;
+                              onSelectItem && onSelectItem({ ...pv, item_type: 'Planned Video' });
+                            }}
+                            style={{
+                              cursor: 'pointer',
+                              background: isRowSelected ? 'rgba(47, 101, 246, 0.08)' : undefined,
+                              borderLeft: isRowSelected ? '3px solid #2F65F6' : undefined
+                            }}
+                          >
                             <td>
                               <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{pv.title}</div>
                               {pv.notes && (

@@ -50,10 +50,11 @@ export default function ChangeLogView({ onOpenNewChangeModal }) {
               <div 
                 key={strat} 
                 style={{ 
-                  background: 'var(--bg-surface-elevated)', 
+                  background: '#F0F3F7', 
                   padding: '1.25rem', 
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-subtle)'
+                  borderRadius: '16px',
+                  border: '1px solid rgba(255, 255, 255, 0.8)',
+                  boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.8)'
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>

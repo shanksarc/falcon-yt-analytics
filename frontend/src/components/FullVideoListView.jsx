@@ -14,7 +14,9 @@ export default function FullVideoListView({
   onEditVideo,
   onOpenPlanVideo,
   onOpenLinkModal,
-  onOpenBulkImport
+  onOpenBulkImport,
+  onSelectItem,
+  selectedItem
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
@@ -310,26 +312,27 @@ export default function FullVideoListView({
             {/* Segmented Format Switcher (Lectures Default!) */}
             <div style={{
               display: 'inline-flex',
-              background: 'var(--bg-surface-elevated)',
+              background: '#E6EAF0',
               padding: '3px',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-subtle)'
+              borderRadius: '9999px',
+              boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.5), inset -2px -2px 4px rgba(255, 255, 255, 0.8)'
             }}>
               <button
                 type="button"
                 onClick={() => { setFilterType('video'); setCurrentPage(1); }}
                 style={{
                   padding: '0.35rem 0.85rem',
-                  borderRadius: 'var(--radius-sm)',
+                  borderRadius: '9999px',
                   fontSize: '0.78rem',
                   fontWeight: filterType === 'video' ? 700 : 500,
-                  background: filterType === 'video' ? 'var(--bg-surface)' : 'transparent',
-                  color: filterType === 'video' ? '#E8A33D' : 'var(--text-secondary)',
-                  border: filterType === 'video' ? '1px solid rgba(232, 163, 61, 0.4)' : '1px solid transparent',
+                  background: filterType === 'video' ? '#F0F3F7' : 'transparent',
+                  color: filterType === 'video' ? '#2F65F6' : '#64748B',
+                  border: 'none',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.35rem',
+                  boxShadow: filterType === 'video' ? '2px 2px 5px rgba(166, 175, 195, 0.4), -2px -2px 5px rgba(255, 255, 255, 0.8)' : 'none',
                   transition: 'all 0.15s ease'
                 }}
               >
@@ -342,20 +345,21 @@ export default function FullVideoListView({
                 onClick={() => { setFilterType('short'); setCurrentPage(1); }}
                 style={{
                   padding: '0.35rem 0.85rem',
-                  borderRadius: 'var(--radius-sm)',
+                  borderRadius: '9999px',
                   fontSize: '0.78rem',
                   fontWeight: filterType === 'short' ? 700 : 500,
-                  background: filterType === 'short' ? 'var(--bg-surface)' : 'transparent',
-                  color: filterType === 'short' ? '#E8A33D' : 'var(--text-secondary)',
-                  border: filterType === 'short' ? '1px solid rgba(232, 163, 61, 0.4)' : '1px solid transparent',
+                  background: filterType === 'short' ? '#F0F3F7' : 'transparent',
+                  color: filterType === 'short' ? '#EA580C' : '#64748B',
+                  border: 'none',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.35rem',
+                  boxShadow: filterType === 'short' ? '2px 2px 5px rgba(166, 175, 195, 0.4), -2px -2px 5px rgba(255, 255, 255, 0.8)' : 'none',
                   transition: 'all 0.15s ease'
                 }}
               >
-                <Zap size={13} fill={filterType === 'short' ? '#E8A33D' : 'none'} />
+                <Zap size={13} fill={filterType === 'short' ? '#EA580C' : 'none'} />
                 <span>Shorts ({stats.shortsTotal})</span>
               </button>
 
@@ -364,13 +368,14 @@ export default function FullVideoListView({
                 onClick={() => { setFilterType('ALL'); setCurrentPage(1); }}
                 style={{
                   padding: '0.35rem 0.85rem',
-                  borderRadius: 'var(--radius-sm)',
+                  borderRadius: '9999px',
                   fontSize: '0.78rem',
                   fontWeight: filterType === 'ALL' ? 700 : 500,
-                  background: filterType === 'ALL' ? 'var(--bg-surface)' : 'transparent',
-                  color: filterType === 'ALL' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  border: filterType === 'ALL' ? '1px solid var(--border-subtle)' : '1px solid transparent',
+                  background: filterType === 'ALL' ? '#F0F3F7' : 'transparent',
+                  color: filterType === 'ALL' ? '#1E293B' : '#64748B',
+                  border: 'none',
                   cursor: 'pointer',
+                  boxShadow: filterType === 'ALL' ? '2px 2px 5px rgba(166, 175, 195, 0.4), -2px -2px 5px rgba(255, 255, 255, 0.8)' : 'none',
                   transition: 'all 0.15s ease'
                 }}
               >
@@ -383,13 +388,13 @@ export default function FullVideoListView({
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
-              background: 'var(--bg-surface-elevated)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-md)',
-              padding: '0.35rem 0.75rem',
+              background: '#E6EAF0',
+              borderRadius: '9999px',
+              padding: '0.4rem 0.95rem',
               minWidth: '220px',
               maxWidth: '320px',
-              flex: '1 1 auto'
+              flex: '1 1 auto',
+              boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.5), inset -2px -2px 4px rgba(255, 255, 255, 0.8)'
             }}>
               <Search size={14} color="var(--text-muted)" />
               <input
@@ -682,10 +687,20 @@ export default function FullVideoListView({
                   const isShort = pv.content_type === 'short';
                   const isLinked = !!pv.linked_video_id;
 
+                  const isRowActive = selectedItem?.id === pv.id;
+
                   return (
                     <tr
                       key={pv.id}
-                      style={{ background: isSelected ? 'rgba(232, 163, 61, 0.08)' : 'inherit' }}
+                      onClick={(e) => {
+                        if (e.target.closest('button, input, select, a')) return;
+                        onSelectItem && onSelectItem({ ...pv, item_type: isShort ? 'Planned Short' : 'Planned Video' });
+                      }}
+                      style={{
+                        cursor: 'pointer',
+                        background: isRowActive ? 'rgba(47, 101, 246, 0.08)' : (isSelected ? 'rgba(232, 163, 61, 0.08)' : 'inherit'),
+                        borderLeft: isRowActive ? '3px solid #2F65F6' : undefined
+                      }}
                     >
                       {/* 1. Selection Checkbox */}
                       <td style={{ textAlign: 'center' }}>

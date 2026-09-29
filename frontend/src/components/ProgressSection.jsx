@@ -201,6 +201,16 @@ function formatSessionLabel(name) {
   return clean || name;
 }
 
+function formatCourseShortName(name) {
+  if (!name) return '';
+  return name
+    .replace(/CFA\s*Level\s*1/i, 'CFA L1')
+    .replace(/CFA\s*Level\s*2/i, 'CFA L2')
+    .replace(/CFA\s*Level\s*3/i, 'CFA L3')
+    .replace(/FRM\s*Part\s*1/i, 'FRM P1')
+    .replace(/FRM\s*Part\s*2/i, 'FRM P2');
+}
+
 export default function ProgressSection({ initialSessionId = null }) {
   // Navigation & Scope State:
   // activeCourseId: null = Global (Full Plan), string = Course Drill-Down
@@ -531,7 +541,7 @@ export default function ProgressSection({ initialSessionId = null }) {
                 }}
               >
                 <BookOpen size={12} style={{ color: isSelected ? '#3B82F6' : 'var(--text-muted)' }} />
-                <span>{c.name}</span>
+                <span>{formatCourseShortName(c.name)}</span>
               </button>
             );
           })}
@@ -1001,14 +1011,11 @@ export default function ProgressSection({ initialSessionId = null }) {
                 background: 'var(--bg-surface-elevated)', 
                 border: '1px solid var(--border-subtle)', 
                 borderRadius: 'var(--radius-md)', 
-                padding: '0.55rem 0.75rem', 
+                padding: '0.7rem 0.85rem', 
                 textAlign: 'left'
               }}>
                 <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#3B82F6', lineHeight: 1 }}>
                   {formatCompactNum(youtube_stats?.total_views || 0)}
-                </div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
-                  {(youtube_stats?.total_views || 0).toLocaleString()} total
                 </div>
               </div>
             </div>
@@ -1023,14 +1030,11 @@ export default function ProgressSection({ initialSessionId = null }) {
                 background: 'var(--bg-surface-elevated)', 
                 border: '1px solid var(--border-subtle)', 
                 borderRadius: 'var(--radius-md)', 
-                padding: '0.55rem 0.75rem', 
+                padding: '0.7rem 0.85rem', 
                 textAlign: 'left'
               }}>
                 <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#3EA65E', lineHeight: 1 }}>
-                  {formatCompactNum(youtube_stats?.total_watch_time_hours || 0)}
-                </div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
-                  {(youtube_stats?.total_watch_time_hours || 0).toLocaleString()} hrs
+                  {formatCompactNum(youtube_stats?.total_watch_time_hours || 0)}h
                 </div>
               </div>
             </div>
@@ -1045,14 +1049,11 @@ export default function ProgressSection({ initialSessionId = null }) {
                 background: 'var(--bg-surface-elevated)', 
                 border: '1px solid var(--border-subtle)', 
                 borderRadius: 'var(--radius-md)', 
-                padding: '0.55rem 0.75rem', 
+                padding: '0.7rem 0.85rem', 
                 textAlign: 'left'
               }}>
                 <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
-                  {(youtube_stats?.total_likes || 0).toLocaleString()}
-                </div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
-                  Total likes
+                  {formatCompactNum(youtube_stats?.total_likes || 0)}
                 </div>
               </div>
             </div>
@@ -1067,14 +1068,11 @@ export default function ProgressSection({ initialSessionId = null }) {
                 background: 'var(--bg-surface-elevated)', 
                 border: '1px solid var(--border-subtle)', 
                 borderRadius: 'var(--radius-md)', 
-                padding: '0.55rem 0.75rem', 
+                padding: '0.7rem 0.85rem', 
                 textAlign: 'left'
               }}>
                 <div style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>
                   {(youtube_stats?.total_comments || 0).toLocaleString()}
-                </div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '3px' }}>
-                  Total comments
                 </div>
               </div>
             </div>
@@ -1393,9 +1391,6 @@ export default function ProgressSection({ initialSessionId = null }) {
                 {filteredVideos.length} to produce
               </span>
             </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '3px 0 0' }}>
-              Quick glance of pending lectures to record & upload (excluding uploaded). Showing 5 at a time.
-            </p>
           </div>
 
           {/* Search Input */}
@@ -1600,25 +1595,25 @@ export default function ProgressSection({ initialSessionId = null }) {
                       {v.status || 'Planned'}
                     </span>
 
-                    {/* Quick Mark Uploaded Action -> Opens LinkYouTubeModal */}
+                    {/* Compact Icon Action Button -> Opens LinkYouTubeModal */}
                     <button
                       type="button"
                       disabled={isUpdating}
                       onClick={() => setLinkingPlannedVideo(v)}
+                      title="Link & Mark Uploaded"
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '0.35rem',
-                        padding: '0.35rem 0.75rem',
-                        borderRadius: 'var(--radius-md)',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
+                        justifyContent: 'center',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '8px',
                         background: 'rgba(62, 166, 94, 0.12)',
                         border: '1px solid rgba(62, 166, 94, 0.35)',
                         color: '#3EA65E',
                         cursor: isUpdating ? 'wait' : 'pointer',
                         transition: 'all 0.15s ease',
-                        whiteSpace: 'nowrap'
+                        flexShrink: 0
                       }}
                       onMouseEnter={(e) => {
                         if (!isUpdating) e.currentTarget.style.background = 'rgba(62, 166, 94, 0.22)';
@@ -1630,9 +1625,8 @@ export default function ProgressSection({ initialSessionId = null }) {
                       {isUpdating ? (
                         <RefreshCw size={12} className="spin" />
                       ) : (
-                        <Check size={12} strokeWidth={2.5} />
+                        <Check size={13} strokeWidth={2.5} />
                       )}
-                      <span>Mark Uploaded</span>
                     </button>
                   </div>
                 </div>
@@ -2283,9 +2277,6 @@ export default function ProgressSection({ initialSessionId = null }) {
                   <BookOpen size={19} color="#3B82F6" />
                   <span>{course?.name} Breakdown</span>
                 </h3>
-                <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: '3px 0 0' }}>
-                  Progress across subjects and exam sessions with visual pipeline infographics.
-                </p>
               </div>
 
               {/* Toggle Buttons: Subjects vs Sessions & Table vs Cards */}

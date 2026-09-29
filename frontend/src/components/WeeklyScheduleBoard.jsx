@@ -425,10 +425,10 @@ export default function WeeklyScheduleBoard({
           {/* Segmented Tier Switcher */}
           <div style={{ 
             display: 'inline-flex', 
-            background: 'var(--bg-surface-elevated)', 
-            padding: '2px', 
-            borderRadius: 'var(--radius-md)', 
-            border: '1px solid var(--border-subtle)' 
+            background: '#E6EAF0', 
+            padding: '3px', 
+            borderRadius: '9999px', 
+            boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.5), inset -2px -2px 4px rgba(255, 255, 255, 0.8)'
           }}>
             <button
               type="button"
@@ -437,15 +437,15 @@ export default function WeeklyScheduleBoard({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.35rem',
-                padding: '0.3rem 0.75rem',
+                padding: '0.35rem 0.85rem',
                 fontSize: '0.78rem',
-                fontWeight: scheduleTier === '12month' ? 600 : 500,
-                color: scheduleTier === '12month' ? 'var(--text-primary)' : 'var(--text-muted)',
-                background: scheduleTier === '12month' ? 'var(--bg-surface)' : 'transparent',
+                fontWeight: scheduleTier === '12month' ? 700 : 500,
+                color: scheduleTier === '12month' ? '#1E293B' : '#64748B',
+                background: scheduleTier === '12month' ? '#F0F3F7' : 'transparent',
                 border: 'none',
-                borderRadius: 'var(--radius-sm)',
+                borderRadius: '9999px',
                 cursor: 'pointer',
-                boxShadow: scheduleTier === '12month' ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
+                boxShadow: scheduleTier === '12month' ? '2px 2px 5px rgba(166, 175, 195, 0.4), -2px -2px 5px rgba(255, 255, 255, 0.8)' : 'none',
                 transition: 'all 0.15s ease'
               }}
               id="btn-tier-12month"
@@ -460,15 +460,15 @@ export default function WeeklyScheduleBoard({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.35rem',
-                padding: '0.3rem 0.75rem',
+                padding: '0.35rem 0.85rem',
                 fontSize: '0.78rem',
-                fontWeight: scheduleTier === '4week' ? 600 : 500,
-                color: scheduleTier === '4week' ? 'var(--text-primary)' : 'var(--text-muted)',
-                background: scheduleTier === '4week' ? 'var(--bg-surface)' : 'transparent',
+                fontWeight: scheduleTier === '4week' ? 700 : 500,
+                color: scheduleTier === '4week' ? '#1E293B' : '#64748B',
+                background: scheduleTier === '4week' ? '#F0F3F7' : 'transparent',
                 border: 'none',
-                borderRadius: 'var(--radius-sm)',
+                borderRadius: '9999px',
                 cursor: 'pointer',
-                boxShadow: scheduleTier === '4week' ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
+                boxShadow: scheduleTier === '4week' ? '2px 2px 5px rgba(166, 175, 195, 0.4), -2px -2px 5px rgba(255, 255, 255, 0.8)' : 'none',
                 transition: 'all 0.15s ease'
               }}
               id="btn-tier-4week"
@@ -481,24 +481,24 @@ export default function WeeklyScheduleBoard({
           {/* Content Type Filter Switcher */}
           <div style={{ 
             display: 'inline-flex', 
-            background: 'var(--bg-surface-elevated)', 
-            padding: '2px', 
-            borderRadius: 'var(--radius-md)', 
-            border: '1px solid var(--border-subtle)' 
+            background: '#E6EAF0', 
+            padding: '3px', 
+            borderRadius: '9999px', 
+            boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.5), inset -2px -2px 4px rgba(255, 255, 255, 0.8)'
           }}>
             <button
               type="button"
               onClick={() => setContentTypeFilter('ALL')}
               style={{
-                padding: '0.3rem 0.65rem',
+                padding: '0.35rem 0.8rem',
                 fontSize: '0.78rem',
-                fontWeight: contentTypeFilter === 'ALL' ? 600 : 500,
-                color: contentTypeFilter === 'ALL' ? 'var(--text-primary)' : 'var(--text-muted)',
-                background: contentTypeFilter === 'ALL' ? 'var(--bg-surface)' : 'transparent',
+                fontWeight: contentTypeFilter === 'ALL' ? 700 : 500,
+                color: contentTypeFilter === 'ALL' ? '#1E293B' : '#64748B',
+                background: contentTypeFilter === 'ALL' ? '#F0F3F7' : 'transparent',
                 border: 'none',
-                borderRadius: 'var(--radius-sm)',
+                borderRadius: '9999px',
                 cursor: 'pointer',
-                boxShadow: contentTypeFilter === 'ALL' ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
+                boxShadow: contentTypeFilter === 'ALL' ? '2px 2px 5px rgba(166, 175, 195, 0.4), -2px -2px 5px rgba(255, 255, 255, 0.8)' : 'none',
                 transition: 'all 0.15s ease'
               }}
             >
@@ -508,15 +508,15 @@ export default function WeeklyScheduleBoard({
               type="button"
               onClick={() => setContentTypeFilter('video')}
               style={{
-                padding: '0.3rem 0.65rem',
+                padding: '0.35rem 0.8rem',
                 fontSize: '0.78rem',
-                fontWeight: contentTypeFilter === 'video' ? 600 : 500,
-                color: contentTypeFilter === 'video' ? 'var(--text-primary)' : 'var(--text-muted)',
-                background: contentTypeFilter === 'video' ? 'var(--bg-surface)' : 'transparent',
+                fontWeight: contentTypeFilter === 'video' ? 700 : 500,
+                color: contentTypeFilter === 'video' ? '#2F65F6' : '#64748B',
+                background: contentTypeFilter === 'video' ? '#F0F3F7' : 'transparent',
                 border: 'none',
-                borderRadius: 'var(--radius-sm)',
+                borderRadius: '9999px',
                 cursor: 'pointer',
-                boxShadow: contentTypeFilter === 'video' ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
+                boxShadow: contentTypeFilter === 'video' ? '2px 2px 5px rgba(166, 175, 195, 0.4), -2px -2px 5px rgba(255, 255, 255, 0.8)' : 'none',
                 transition: 'all 0.15s ease'
               }}
             >
@@ -529,19 +529,19 @@ export default function WeeklyScheduleBoard({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.3rem',
-                padding: '0.3rem 0.65rem',
+                padding: '0.35rem 0.8rem',
                 fontSize: '0.78rem',
-                fontWeight: contentTypeFilter === 'short' ? 600 : 500,
-                color: contentTypeFilter === 'short' ? '#E8A33D' : 'var(--text-muted)',
-                background: contentTypeFilter === 'short' ? 'var(--bg-surface)' : 'transparent',
+                fontWeight: contentTypeFilter === 'short' ? 700 : 500,
+                color: contentTypeFilter === 'short' ? '#EA580C' : '#64748B',
+                background: contentTypeFilter === 'short' ? '#F0F3F7' : 'transparent',
                 border: 'none',
-                borderRadius: 'var(--radius-sm)',
+                borderRadius: '9999px',
                 cursor: 'pointer',
-                boxShadow: contentTypeFilter === 'short' ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
+                boxShadow: contentTypeFilter === 'short' ? '2px 2px 5px rgba(166, 175, 195, 0.4), -2px -2px 5px rgba(255, 255, 255, 0.8)' : 'none',
                 transition: 'all 0.15s ease'
               }}
             >
-              <Zap size={12} fill={contentTypeFilter === 'short' ? '#E8A33D' : 'none'} />
+              <Zap size={12} fill={contentTypeFilter === 'short' ? '#EA580C' : 'none'} />
               <span>Shorts</span>
             </button>
           </div>

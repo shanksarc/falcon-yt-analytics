@@ -91,7 +91,7 @@ export default function LeaderboardView() {
   };
 
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #E8ECF1', borderRadius: '16px', boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.04)', padding: '24px' }}>
+    <div style={{ background: '#F0F3F7', border: '1px solid rgba(255, 255, 255, 0.6)', borderRadius: '22px', boxShadow: '6px 6px 14px rgba(166, 175, 195, 0.55), -6px -6px 14px rgba(255, 255, 255, 0.85)', padding: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#1E293B', letterSpacing: '-0.01em' }}>Monthly Performance Leaderboard</h2>
@@ -117,7 +117,7 @@ export default function LeaderboardView() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Metric:</span>
-            <div style={{ display: 'flex', background: 'var(--bg-surface-elevated)', borderRadius: 'var(--radius-md)', padding: '2px' }}>
+            <div style={{ display: 'flex', background: '#E6EAF0', borderRadius: '9999px', padding: '3px', boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.5), inset -2px -2px 4px rgba(255, 255, 255, 0.8)' }}>
               <button 
                 className={`btn-secondary ${metric === 'views' ? 'btn-primary' : ''}`}
                 style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
@@ -151,10 +151,10 @@ export default function LeaderboardView() {
               display: 'inline-flex', 
               alignItems: 'center', 
               gap: '0.4rem', 
-              background: 'var(--bg-surface-elevated)', 
-              padding: '0.25rem 0.6rem', 
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-subtle)',
+              background: '#E6EAF0', 
+              padding: '0.25rem 0.75rem', 
+              borderRadius: '9999px',
+              boxShadow: 'inset 1px 1px 3px rgba(166, 175, 195, 0.4), inset -1px -1px 3px rgba(255, 255, 255, 0.7)',
               fontSize: '0.72rem'
             }}>
               <span style={{ color: 'rgb(239, 68, 68)', fontWeight: 700 }}>Worst</span>
@@ -321,13 +321,13 @@ export default function LeaderboardView() {
       {/* Strategic Insight Takeaway Box */}
       <div style={{ 
         marginTop: '1.25rem', 
-        padding: '1rem 1.25rem', 
-        background: 'var(--bg-surface-elevated)', 
-        borderRadius: 'var(--radius-md)',
-        border: '1px solid var(--border-subtle)',
+        padding: '1.1rem 1.35rem', 
+        background: '#E6EAF0', 
+        borderRadius: '16px', 
+        boxShadow: 'inset 2px 2px 5px rgba(166, 175, 195, 0.45), inset -2px -2px 5px rgba(255, 255, 255, 0.85)',
         display: 'flex',
         alignItems: 'flex-start',
-        gap: '0.75rem'
+        gap: '0.85rem'
       }}>
         <HelpCircle size={18} color="var(--cfa-gold)" style={{ flexShrink: 0, marginTop: '2px' }} />
         <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>

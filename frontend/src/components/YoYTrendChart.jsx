@@ -1,19 +1,26 @@
 import React, { useState } from 'react';
 import { TrendingUp, TrendingDown, Eye, Clock, Users, Percent, Calendar } from 'lucide-react';
 
-export default function YoYTrendChart({ trendData, title = "12-Month Performance Trend (YoY Comparison)", subtitle = "Compares each month against the same month of the previous year" }) {
+export default function YoYTrendChart({ trendData, title = "12-Month Performance Trend (YoY Comparison)", subtitle = "" }) {
   const [activeMetric, setActiveMetric] = useState('views'); // 'views' | 'watch_time' | 'subscribers' | 'ctr'
 
-  if (!trendData || !trendData.months || trendData.months.length === 0) {
+  const months = trendData?.months || [];
+  const totals = trendData?.totals;
+
+  const hasAnyData = months.some(m =>
+    ['views', 'watch_time', 'subscribers', 'ctr'].some(k => m[k]?.cur > 0 || m[k]?.prev > 0)
+  );
+
+  if (!trendData || months.length === 0 || !hasAnyData) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-        No historical trend data available.
+      <div className="content-card" style={{ padding: '2.5rem 1.5rem', textAlign: 'center', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)' }}>
+        <Calendar style={{ width: '28px', height: '28px', color: '#94A3B8', margin: '0 auto 8px', strokeWidth: 1.5 }} />
+        <p style={{ fontSize: '0.85rem', color: '#64748B', margin: 0, fontWeight: 500 }}>
+          No YoY trend data available yet — requires 12 months of channel history.
+        </p>
       </div>
     );
   }
-
-  const months = trendData.months;
-  const totals = trendData.totals;
 
   const getMetricDetails = (m) => {
     const item = m[activeMetric] || { cur: 0, prev: 0, yoy_pct: 0 };
@@ -72,7 +79,7 @@ export default function YoYTrendChart({ trendData, title = "12-Month Performance
       <div className="content-card-header">
         <div className="card-title-group">
           <h3 style={{ fontSize: '1.15rem' }}>{title}</h3>
-          <p>{subtitle}</p>
+          {subtitle && <p>{subtitle}</p>}
         </div>
 
         <div className="controls-bar">
