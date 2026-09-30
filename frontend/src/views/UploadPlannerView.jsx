@@ -12,6 +12,7 @@ import FullVideoListView from '../components/FullVideoListView';
 import LinkYouTubeModal from '../components/LinkYouTubeModal';
 import ErrorBoundary from '../components/ErrorBoundary';
 import ForecastSpeedometerCard from '../components/ForecastSpeedometerCard';
+import SegmentedLedProgress from '../components/SegmentedLedProgress';
 import { getLocalPlannedVideos, mergePlannedVideos, syncLocalVideosToServer, saveLocalPlannedVideo } from '../utils/plannerStorage';
 
 function getStatusColor(pacing) {
@@ -379,108 +380,130 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
 
       {/* 3. Consolidated KPI Metrics Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '14px', width: '100%' }}>
-        {/* Tile 1: Lectures Progress */}
-        <div style={{
-          background: '#F0F3F7',
-          border: '1px solid rgba(255, 255, 255, 0.8)',
-          borderRadius: '16px',
-          padding: '14px 16px',
-          boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.85)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Lectures Progress
-            </span>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#059669' }}>
-              {kpiStats.lecturesPct}%
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-            <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#1E293B', lineHeight: 1 }}>
-              {kpiStats.lecturesUploaded}
-            </span>
-            <span style={{ fontSize: '0.82rem', color: '#64748B' }}>
-              / {kpiStats.lecturesTotal} lectures
-            </span>
-          </div>
-          <div style={{ height: '5px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${kpiStats.lecturesPct}%`, background: '#10B981', borderRadius: '3px', transition: 'width 0.3s ease' }} />
-          </div>
-        </div>
-
-        {/* Tile 2: Shorts Progress */}
-        <div style={{
-          background: '#F0F3F7',
-          border: '1px solid rgba(255, 255, 255, 0.8)',
-          borderRadius: '16px',
-          padding: '14px 16px',
-          boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.85)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#EA580C', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Shorts Pipeline
-            </span>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#EA580C' }}>
-              {kpiStats.shortsPct}%
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-            <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#1E293B', lineHeight: 1 }}>
-              {kpiStats.shortsUploaded}
-            </span>
-            <span style={{ fontSize: '0.82rem', color: '#64748B' }}>
-              / {kpiStats.shortsTotal} shorts
-            </span>
-          </div>
-          <div style={{ height: '5px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${kpiStats.shortsPct}%`, background: '#F97316', borderRadius: '3px', transition: 'width 0.3s ease' }} />
-          </div>
-        </div>
-
-        {/* Tile 3: Pipeline Backlog */}
-        <div style={{
-          background: '#F0F3F7',
-          border: '1px solid rgba(255, 255, 255, 0.8)',
-          borderRadius: '16px',
-          padding: '14px 16px',
-          boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.85)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Active Backlog
-            </span>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#D97706' }}>
-              {kpiStats.schedCount} scheduled
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-            <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#1E293B', lineHeight: 1 }}>
-              {kpiStats.totalBacklog}
-            </span>
-            <span style={{ fontSize: '0.82rem', color: '#64748B' }}>
-              videos in queue
-            </span>
-          </div>
-          <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Clock size={11} color="#D97706" />
-            <span>{kpiStats.inProdCount} drafting · {kpiStats.schedCount} ready</span>
-          </div>
-        </div>
-
-        {/* Tile 4: Forecast Speedometer */}
+        {/* Card 1: Forecast Speedometer */}
         <ForecastSpeedometerCard
           plannedVideos={allPlannedVideos}
           activeSession={activeSession}
         />
+
+        {/* Card 2: Lectures Progress */}
+        <div style={{
+          background: '#F0F3F7',
+          border: '1px solid rgba(255, 255, 255, 0.8)',
+          borderRadius: '16px',
+          padding: '12px 14px',
+          boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.85)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          minHeight: '126px'
+        }}>
+          {/* Top Header Row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Lectures Progress
+            </span>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '10px',
+              fontWeight: 600,
+              padding: '2px 7px',
+              borderRadius: '9999px',
+              background: kpiStats.lecturesPct >= 100 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(37, 99, 235, 0.1)',
+              color: kpiStats.lecturesPct >= 100 ? '#059669' : '#2563EB'
+            }}>
+              {kpiStats.lecturesPct}%
+            </div>
+          </div>
+
+          {/* Center: Segmented LED Progress Bar matching template */}
+          <div style={{ margin: '6px 0' }}>
+            <SegmentedLedProgress percentage={kpiStats.lecturesPct} />
+          </div>
+
+          {/* Bottom Numbers Row */}
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
+              <span style={{ fontSize: '1.45rem', fontWeight: 800, color: '#1E293B', lineHeight: 1 }}>
+                {kpiStats.lecturesUploaded}
+              </span>
+              <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
+                / {kpiStats.lecturesTotal} lectures
+              </span>
+            </div>
+            <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 600 }}>
+              {Math.max(0, kpiStats.lecturesTotal - kpiStats.lecturesUploaded)} left
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: Shorts Progress */}
+        <div style={{
+          background: '#F0F3F7',
+          border: '1px solid rgba(255, 255, 255, 0.8)',
+          borderRadius: '16px',
+          padding: '12px 14px',
+          boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.85)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          minHeight: '126px'
+        }}>
+          {/* Top Header Row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Shorts Progress
+            </span>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '10px',
+              fontWeight: 600,
+              padding: '2px 7px',
+              borderRadius: '9999px',
+              background: kpiStats.shortsPct >= 100 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(37, 99, 235, 0.1)',
+              color: kpiStats.shortsPct >= 100 ? '#059669' : '#2563EB'
+            }}>
+              {kpiStats.shortsPct}%
+            </div>
+          </div>
+
+          {/* Center: Segmented LED Progress Bar matching template */}
+          <div style={{ margin: '6px 0' }}>
+            <SegmentedLedProgress percentage={kpiStats.shortsPct} />
+          </div>
+
+          {/* Bottom Numbers Row */}
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
+              <span style={{ fontSize: '1.45rem', fontWeight: 800, color: '#1E293B', lineHeight: 1 }}>
+                {kpiStats.shortsUploaded}
+              </span>
+              <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
+                / {kpiStats.shortsTotal} shorts
+              </span>
+            </div>
+            <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 600 }}>
+              {Math.max(0, kpiStats.shortsTotal - kpiStats.shortsUploaded)} left
+            </span>
+          </div>
+        </div>
+
+        {/* Card 4: Blank card */}
+        <div style={{
+          background: '#F0F3F7',
+          border: '1px solid rgba(255, 255, 255, 0.8)',
+          borderRadius: '16px',
+          padding: '12px 14px',
+          boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.85)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          minHeight: '126px'
+        }} />
       </div>
 
       {/* 4. Active Tab Content View */}
