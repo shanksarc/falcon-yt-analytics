@@ -7,6 +7,34 @@ from datetime import datetime, timedelta
 import json
 import re
 import os
+import sys
+import errno
+
+class SafeStream:
+    def __init__(self, stream):
+        self._stream = stream
+    def write(self, s):
+        try:
+            if self._stream:
+                return self._stream.write(s)
+        except (OSError, IOError):
+            pass
+    def flush(self):
+        try:
+            if self._stream:
+                return self._stream.flush()
+        except (OSError, IOError):
+            pass
+    def isatty(self):
+        try:
+            return self._stream.isatty() if self._stream else False
+        except (OSError, IOError):
+            return False
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+sys.stdout = SafeStream(sys.stdout)
+sys.stderr = SafeStream(sys.stderr)
 
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
