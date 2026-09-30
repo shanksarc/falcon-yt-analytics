@@ -1431,27 +1431,43 @@ def create_planned_video(pv: PlannedVideoCreate):
 @app.post("/api/planner/sync-client")
 def sync_client_planned_videos(payload: Dict[str, Any]):
     """
-    Syncs client-side planned videos into the current server database container.
-    Essential for Vercel Serverless cold-starts where /tmp starts fresh.
+    Syncs client-side planned videos and purges client-deleted video IDs.
+    Essential for Vercel Serverless cold-starts where /tmp starts fresh from bundled DB.
     """
-    videos = payload.get("videos") or []
-    if not videos:
-        return {"status": "success", "synced": 0}
-
     conn = get_connection()
     cursor = conn.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS deleted_planned_videos (id TEXT PRIMARY KEY, deleted_at TEXT)")
+    now_str = datetime.now().isoformat()
+
+    # 1. Process client-reported deletions
+    deleted_ids = payload.get("deleted_ids") or []
+    if deleted_ids:
+        for d_id in deleted_ids:
+            cursor.execute("INSERT OR REPLACE INTO deleted_planned_videos (id, deleted_at) VALUES (?, ?)", (d_id, now_str))
+        del_placeholders = ",".join("?" for _ in deleted_ids)
+        cursor.execute(f"DELETE FROM planned_videos WHERE id IN ({del_placeholders})", tuple(deleted_ids))
+        cursor.execute(f"DELETE FROM planned_video_lists WHERE planned_video_id IN ({del_placeholders})", tuple(deleted_ids))
+        cursor.execute(f"DELETE FROM match_review_queue WHERE planned_video_id IN ({del_placeholders})", tuple(deleted_ids))
+
+    # 2. Process client planned videos
+    videos = payload.get("videos") or []
     synced_count = 0
 
     for v in videos:
         vid = v.get("id")
         if not vid or not v.get("title"):
             continue
+
+        # Skip if video was deleted by user
+        cursor.execute("SELECT id FROM deleted_planned_videos WHERE id = ?", (vid,))
+        if cursor.fetchone():
+            continue
+
         cursor.execute("SELECT id FROM planned_videos WHERE id = ?", (vid,))
         if cursor.fetchone():
             continue
 
         assigned_m = v.get("assigned_month") or derive_month_from_week(v.get("assigned_week"))
-        now_str = v.get("created_at") or datetime.now().isoformat()
         cursor.execute("""
             INSERT OR IGNORE INTO planned_videos (id, title, session_id, status, assigned_month, assigned_week, notes, content_type, hook, series, target_duration_sec, production_stage, is_urgent, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1469,7 +1485,7 @@ def sync_client_planned_videos(payload: Dict[str, Any]):
             v.get("target_duration_sec") or 60,
             v.get("production_stage") or "Idea",
             1 if v.get("is_urgent") else 0,
-            now_str,
+            v.get("created_at") or now_str,
             v.get("updated_at") or now_str
         ))
 
@@ -1487,12 +1503,13 @@ def sync_client_planned_videos(payload: Dict[str, Any]):
     conn.commit()
     conn.close()
 
-    try:
-        run_auto_matching()
-    except Exception as _match_err:
-        pass
+    if synced_count > 0:
+        try:
+            run_auto_matching()
+        except Exception:
+            pass
 
-    return {"status": "success", "synced": synced_count}
+    return {"status": "success", "synced": synced_count, "purged_deleted": len(deleted_ids)}
 
 @app.post("/api/planner/validate-entries")
 def validate_entries_endpoint(entries: List[RawPlannerEntry]):
@@ -1651,6 +1668,9 @@ def update_planned_video(pv_id: str, pv: PlannedVideoUpdate):
 def delete_planned_video(pv_id: str):
     conn = get_connection()
     cursor = conn.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS deleted_planned_videos (id TEXT PRIMARY KEY, deleted_at TEXT)")
+    now_str = datetime.now().isoformat()
+    cursor.execute("INSERT OR REPLACE INTO deleted_planned_videos (id, deleted_at) VALUES (?, ?)", (pv_id, now_str))
     cursor.execute("DELETE FROM planned_videos WHERE id = ?", (pv_id,))
     cursor.execute("DELETE FROM planned_video_lists WHERE planned_video_id = ?", (pv_id,))
     cursor.execute("DELETE FROM match_review_queue WHERE planned_video_id = ?", (pv_id,))
@@ -1713,6 +1733,10 @@ def bulk_delete_planned_videos(payload: BulkDeleteRequest):
         return {"status": "success", "deleted_count": 0}
     conn = get_connection()
     cursor = conn.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS deleted_planned_videos (id TEXT PRIMARY KEY, deleted_at TEXT)")
+    now_str = datetime.now().isoformat()
+    for vid in payload.video_ids:
+        cursor.execute("INSERT OR REPLACE INTO deleted_planned_videos (id, deleted_at) VALUES (?, ?)", (vid, now_str))
     placeholders = ",".join("?" for _ in payload.video_ids)
     cursor.execute(f"DELETE FROM planned_videos WHERE id IN ({placeholders})", tuple(payload.video_ids))
     cursor.execute(f"DELETE FROM planned_video_lists WHERE planned_video_id IN ({placeholders})", tuple(payload.video_ids))

@@ -508,28 +508,34 @@ export default function FullVideoListView({
   const isAllCurrentSelected = paginatedVideos.length > 0 && paginatedVideos.every(v => selectedIds.has(v.id));
 
   return (
-    <div className="full-video-list-container">
+    <div className="full-video-list-container" style={{ width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', overflowX: 'hidden' }}>
       {/* ------------------------------------------------------------- */}
       {/* Controls & Filter Bar                                         */}
       {/* ------------------------------------------------------------- */}
-      <div className="content-card" style={{ marginBottom: '1rem', padding: '0.85rem 1.25rem', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+      <div className="content-card full-video-filter-card" style={{ marginBottom: '1rem', padding: '0.85rem 1rem', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '0.75rem',
-          width: '100%'
+          width: '100%',
+          maxWidth: '100%',
+          minWidth: 0
         }}>
           {/* Format Segmented Switcher + Search Box */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flex: '1 1 auto', maxWidth: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', flex: '1 1 280px', maxWidth: '100%', minWidth: 0 }}>
             {/* Segmented Format Switcher (Lectures Default!) */}
             <div style={{
               display: 'inline-flex',
               background: '#E6EAF0',
               padding: '3px',
               borderRadius: '9999px',
-              boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.5), inset -2px -2px 4px rgba(255, 255, 255, 0.8)'
+              boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.5), inset -2px -2px 4px rgba(255, 255, 255, 0.8)',
+              maxWidth: '100%',
+              overflowX: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'none'
             }}>
               <button
                 type="button"
@@ -639,13 +645,13 @@ export default function FullVideoListView({
           </div>
 
           {/* Filter Dropdowns */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', maxWidth: '100%', minWidth: 0, flex: '1 1 300px' }}>
             {/* Content Type Filter */}
             <select
               className="control-select"
               value={filterType}
               onChange={(e) => { setFilterType(e.target.value); setCurrentPage(1); }}
-              style={{ fontSize: '0.78rem' }}
+              style={{ fontSize: '0.78rem', minWidth: 0, maxWidth: '100%', flex: '1 1 120px' }}
             >
               <option value="video">Lectures (Default)</option>
               <option value="short">⚡ Shorts Only</option>
@@ -657,7 +663,7 @@ export default function FullVideoListView({
               className="control-select"
               value={filterStatus}
               onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
-              style={{ fontSize: '0.78rem' }}
+              style={{ fontSize: '0.78rem', minWidth: 0, maxWidth: '100%', flex: '1 1 115px' }}
             >
               <option value="ALL">All Statuses</option>
               <option value="Planned">Planned</option>
@@ -672,7 +678,7 @@ export default function FullVideoListView({
               className="control-select"
               value={filterSession}
               onChange={(e) => { setFilterSession(e.target.value); setCurrentPage(1); }}
-              style={{ fontSize: '0.78rem' }}
+              style={{ fontSize: '0.78rem', minWidth: 0, maxWidth: '100%', flex: '1 1 130px' }}
             >
               <option value="ALL">All Exam Windows</option>
               {sessions.map(s => (
@@ -686,7 +692,7 @@ export default function FullVideoListView({
               className="control-select"
               value={filterList}
               onChange={(e) => { setFilterList(e.target.value); setCurrentPage(1); }}
-              style={{ fontSize: '0.78rem' }}
+              style={{ fontSize: '0.78rem', minWidth: 0, maxWidth: '100%', flex: '1 1 135px' }}
             >
               <option value="ALL">All Lists & Courses</option>
 
@@ -718,24 +724,26 @@ export default function FullVideoListView({
             </select>
 
             {/* Action Buttons */}
-            <button
-              className="btn-ghost"
-              onClick={onOpenBulkImport}
-              style={{ border: '1px solid var(--border-subtle)', fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}
-              title="Bulk import planned videos from text"
-            >
-              <UploadCloud size={13} />
-              <span>Bulk Import</span>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}>
+              <button
+                className="btn-ghost"
+                onClick={onOpenBulkImport}
+                style={{ border: '1px solid var(--border-subtle)', fontSize: '0.78rem', padding: '0.35rem 0.65rem', whiteSpace: 'nowrap' }}
+                title="Bulk import planned videos from text"
+              >
+                <UploadCloud size={13} />
+                <span>Bulk Import</span>
+              </button>
 
-            <button
-              className="btn-primary"
-              onClick={onOpenPlanVideo}
-              style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
-            >
-              <Plus size={13} />
-              <span>Plan Video</span>
-            </button>
+              <button
+                className="btn-primary"
+                onClick={onOpenPlanVideo}
+                style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem', whiteSpace: 'nowrap' }}
+              >
+                <Plus size={13} />
+                <span>Plan Video</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -870,9 +878,9 @@ export default function FullVideoListView({
       {/* ------------------------------------------------------------- */}
       {/* Video Table                                                   */}
       {/* ------------------------------------------------------------- */}
-      <div className="content-card" style={{ padding: 0, overflow: 'hidden', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-        <div className="table-responsive" style={{ width: '100%', maxWidth: '100%', minWidth: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table className="analytics-table" style={{ margin: 0 }}>
+      <div className="content-card" style={{ padding: 0, overflow: 'hidden', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', position: 'relative' }}>
+        <div className="table-responsive" style={{ width: '100%', maxWidth: '100%', minWidth: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch', border: 'none', boxShadow: 'none', borderRadius: 0, margin: 0 }}>
+          <table className="analytics-table" style={{ margin: 0, minWidth: '780px', width: '100%' }}>
             <thead>
               <tr>
                 <th style={{ width: '38px', textAlign: 'center', padding: '0.5rem 0.35rem' }}>

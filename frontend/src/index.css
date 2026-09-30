@@ -1388,6 +1388,27 @@ h1, h2, h3, h4, h5, h6 {
     max-height: 90vh !important;
     width: 95vw !important;
   }
+
+  /* Full Video List Mobile Overflow Prevention */
+  .full-video-list-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  .full-video-list-container .full-video-filter-card {
+    padding: 0.75rem 0.65rem !important;
+    border-radius: 16px !important;
+  }
+
+  .full-video-list-container .control-select {
+    flex: 1 1 calc(50% - 6px) !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    font-size: 0.74rem !important;
+    padding: 0.4rem 0.65rem !important;
+  }
 }
 
 @media (max-width: 480px) {

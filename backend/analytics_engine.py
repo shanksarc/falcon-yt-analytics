@@ -1078,6 +1078,8 @@ def get_planned_videos_filtered(session_id: Optional[str] = None, list_id: Optio
     conn = get_connection()
     cursor = conn.cursor()
 
+    cursor.execute("CREATE TABLE IF NOT EXISTS deleted_planned_videos (id TEXT PRIMARY KEY, deleted_at TEXT)")
+
     query = """
         SELECT DISTINCT
             pv.*,
@@ -1091,7 +1093,7 @@ def get_planned_videos_filtered(session_id: Optional[str] = None, list_id: Optio
         LEFT JOIN sessions s ON pv.session_id = s.id
         LEFT JOIN videos v ON pv.linked_video_id = v.id
         LEFT JOIN planned_video_lists pvl ON pv.id = pvl.planned_video_id
-        WHERE 1=1
+        WHERE 1=1 AND pv.id NOT IN (SELECT id FROM deleted_planned_videos)
     """
     params = []
 

@@ -2,6 +2,24 @@
 // Ensures planned videos are instantly visible (optimistic UI) and persist across Vercel cold starts / multi-container serverless instances.
 
 const STORAGE_KEY = 'falcon_custom_planned_videos';
+const DELETED_STORAGE_KEY = 'falcon_deleted_planned_video_ids';
+
+/**
+ * Retrieve set of video IDs that have been deleted by the user.
+ * Persisting this in localStorage prevents ephemeral Vercel lambda containers
+ * or cold-start bundled SQLite DBs from resurrecting deleted videos.
+ */
+export function getDeletedPlannedVideoIds() {
+  try {
+    const raw = localStorage.getItem(DELETED_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch (e) {
+    console.warn('Failed to read deleted planned video IDs:', e);
+    return new Set();
+  }
+}
 
 /**
  * Retrieve custom planned videos stored in localStorage.
@@ -11,7 +29,8 @@ export function getLocalPlannedVideos() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    const deletedIds = getDeletedPlannedVideoIds();
+    return (Array.isArray(parsed) ? parsed : []).filter(v => v && v.id && !deletedIds.has(v.id));
   } catch (e) {
     console.warn('Failed to read local planned videos:', e);
     return [];
@@ -24,6 +43,13 @@ export function getLocalPlannedVideos() {
 export function saveLocalPlannedVideo(video) {
   if (!video || !video.id) return;
   try {
+    // If previously marked deleted, unmark it because user explicitly recreated/saved it
+    const deletedSet = getDeletedPlannedVideoIds();
+    if (deletedSet.has(video.id)) {
+      deletedSet.delete(video.id);
+      localStorage.setItem(DELETED_STORAGE_KEY, JSON.stringify(Array.from(deletedSet)));
+    }
+
     const current = getLocalPlannedVideos();
     const existingIdx = current.findIndex(v => v.id === video.id);
     let updated;
@@ -34,21 +60,29 @@ export function saveLocalPlannedVideo(video) {
       updated = [{ ...video, created_at: video.created_at || new Date().toISOString() }, ...current];
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    window.dispatchEvent(new CustomEvent('falcon_planner_updated', { detail: { video, action: 'save' } }));
+    window.dispatchEvent(new CustomEvent('falcon_planner_updated', { detail: { video, videoId: video.id, action: 'save' } }));
   } catch (e) {
     console.warn('Failed to save local planned video:', e);
   }
 }
 
 /**
- * Remove a planned video from localStorage.
+ * Permanently remove a planned video and record it in the persistent deleted registry.
  */
 export function removeLocalPlannedVideo(videoId) {
   if (!videoId) return;
   try {
+    // 1. Record ID in persistent deleted registry so server responses won't resurrect it
+    const deletedSet = getDeletedPlannedVideoIds();
+    deletedSet.add(videoId);
+    localStorage.setItem(DELETED_STORAGE_KEY, JSON.stringify(Array.from(deletedSet)));
+
+    // 2. Remove from active local videos list
     const current = getLocalPlannedVideos();
     const filtered = current.filter(v => v.id !== videoId);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+
+    // 3. Dispatch planner update event with deletion details
     window.dispatchEvent(new CustomEvent('falcon_planner_updated', { detail: { videoId, action: 'delete' } }));
   } catch (e) {
     console.warn('Failed to remove local planned video:', e);
@@ -58,26 +92,28 @@ export function removeLocalPlannedVideo(videoId) {
 /**
  * Merges server videos with locally stored videos.
  * Guarantees that any video planned in the online app is immediately present,
- * even if the server is an ephemeral Vercel lambda.
+ * and crucially ensures that ANY deleted video is NEVER resurrected.
  */
 export function mergePlannedVideos(serverVideos = [], localVideos = []) {
   const serverArr = Array.isArray(serverVideos) ? serverVideos : [];
   const localArr = Array.isArray(localVideos) ? localVideos : [];
+  const deletedIds = getDeletedPlannedVideoIds();
   
   const map = new Map();
   
-  // First insert all server videos
+  // 1. Insert server videos that have NOT been deleted by the user
   serverArr.forEach(v => {
-    if (v && v.id) map.set(v.id, v);
+    if (v && v.id && !deletedIds.has(v.id)) {
+      map.set(v.id, v);
+    }
   });
   
-  // Then overlay local videos that aren't on the server yet or have newer local updates
+  // 2. Overlay local videos that aren't on the server yet or have newer local updates
   localArr.forEach(v => {
-    if (v && v.id) {
+    if (v && v.id && !deletedIds.has(v.id)) {
       if (!map.has(v.id)) {
         map.set(v.id, v);
       } else {
-        // If local is present on server, check if local has more recent updates
         const serverItem = map.get(v.id);
         const serverTime = serverItem.updated_at ? new Date(serverItem.updated_at).getTime() : 0;
         const localTime = v.updated_at ? new Date(v.updated_at).getTime() : 0;
@@ -88,7 +124,7 @@ export function mergePlannedVideos(serverVideos = [], localVideos = []) {
     }
   });
 
-  // Sort by created_at descending
+  // 3. Sort by created_at descending
   return Array.from(map.values()).sort((a, b) => {
     const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
     const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -98,28 +134,33 @@ export function mergePlannedVideos(serverVideos = [], localVideos = []) {
 
 /**
  * Background sync: syncs locally saved videos to the backend server
- * so server endpoints (progress analytics, review queue, etc.) know about them.
+ * and propagates deleted video IDs so serverless instances purge them from /tmp DB.
  */
 export async function syncLocalVideosToServer(serverVideos = []) {
   const local = getLocalPlannedVideos();
-  if (local.length === 0) return;
+  const deletedIds = Array.from(getDeletedPlannedVideoIds());
 
   const serverIds = new Set((serverVideos || []).map(v => v.id));
   const missingOnServer = local.filter(v => !serverIds.has(v.id));
 
-  if (missingOnServer.length === 0) return;
+  // If nothing to sync or purge, return early
+  if (missingOnServer.length === 0 && deletedIds.length === 0) return;
 
   try {
-    // Try bulk client sync endpoint first
+    // Call bulk client sync endpoint with both missing videos and deleted IDs
     const syncRes = await fetch('/api/planner/sync-client', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ videos: missingOnServer })
+      body: JSON.stringify({
+        videos: missingOnServer,
+        deleted_ids: deletedIds
+      })
     });
 
-    if (!syncRes.ok) {
-      // Fallback: send individual items if sync-client endpoint not available
+    if (!syncRes.ok && missingOnServer.length > 0) {
+      // Fallback: send individual items if sync-client endpoint has an issue
       for (const item of missingOnServer) {
+        if (deletedIds.includes(item.id)) continue;
         await fetch('/api/planner/videos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

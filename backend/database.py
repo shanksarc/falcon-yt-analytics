@@ -214,6 +214,14 @@ def init_db():
     );
     """)
 
+    # Persistent Deleted Planned Videos Registry
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS deleted_planned_videos (
+        id TEXT PRIMARY KEY,
+        deleted_at TEXT
+    );
+    """)
+
     # Check for assigned_month column migration
     cursor.execute("PRAGMA table_info(planned_videos)")
     pv_cols = [col[1] for col in cursor.fetchall()]

@@ -60,9 +60,14 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
   }, []);
 
   useEffect(() => {
-    const handlePlannerEvent = () => {
-      const localVideos = getLocalPlannedVideos();
-      setAllPlannedVideos(prev => mergePlannedVideos(prev, localVideos));
+    const handlePlannerEvent = (e) => {
+      const deletedId = e?.detail?.videoId;
+      if (e?.detail?.action === 'delete' && deletedId) {
+        setAllPlannedVideos(prev => prev.filter(v => v.id !== deletedId));
+      } else {
+        const localVideos = getLocalPlannedVideos();
+        setAllPlannedVideos(prev => mergePlannedVideos(prev, localVideos));
+      }
       setRefreshCounter(c => c + 1);
     };
     window.addEventListener('falcon_planner_updated', handlePlannerEvent);

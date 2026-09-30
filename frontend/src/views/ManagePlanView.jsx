@@ -101,9 +101,14 @@ export default function ManagePlanView({ onSelectItem, selectedItem }) {
   }, []);
 
   useEffect(() => {
-    const handlePlannerEvent = () => {
-      const localVideos = getLocalPlannedVideos();
-      setAllPlannedVideos(prev => mergePlannedVideos(prev, localVideos));
+    const handlePlannerEvent = (e) => {
+      const deletedId = e?.detail?.videoId;
+      if (e?.detail?.action === 'delete' && deletedId) {
+        setAllPlannedVideos(prev => prev.filter(v => v.id !== deletedId));
+      } else {
+        const localVideos = getLocalPlannedVideos();
+        setAllPlannedVideos(prev => mergePlannedVideos(prev, localVideos));
+      }
     };
     window.addEventListener('falcon_planner_updated', handlePlannerEvent);
     return () => window.removeEventListener('falcon_planner_updated', handlePlannerEvent);
