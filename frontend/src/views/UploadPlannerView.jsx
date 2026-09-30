@@ -11,6 +11,7 @@ import ProgressSection from '../components/ProgressSection';
 import FullVideoListView from '../components/FullVideoListView';
 import LinkYouTubeModal from '../components/LinkYouTubeModal';
 import ErrorBoundary from '../components/ErrorBoundary';
+import ForecastSpeedometerCard from '../components/ForecastSpeedometerCard';
 import { getLocalPlannedVideos, mergePlannedVideos, syncLocalVideosToServer, saveLocalPlannedVideo } from '../utils/plannerStorage';
 
 function getStatusColor(pacing) {
@@ -475,37 +476,11 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
           </div>
         </div>
 
-        {/* Tile 4: Overall Target Velocity */}
-        <div style={{
-          background: '#F0F3F7',
-          border: '1px solid rgba(255, 255, 255, 0.8)',
-          borderRadius: '16px',
-          padding: '14px 16px',
-          boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.85)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Overall Target
-            </span>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#2563EB' }}>
-              {kpiStats.velocityPct}%
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-            <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#1E293B', lineHeight: 1 }}>
-              {kpiStats.totalUploaded}
-            </span>
-            <span style={{ fontSize: '0.82rem', color: '#64748B' }}>
-              / {kpiStats.totalVideos} total
-            </span>
-          </div>
-          <div style={{ height: '5px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${kpiStats.velocityPct}%`, background: '#2563EB', borderRadius: '3px', transition: 'width 0.3s ease' }} />
-          </div>
-        </div>
+        {/* Tile 4: Forecast Speedometer */}
+        <ForecastSpeedometerCard
+          plannedVideos={allPlannedVideos}
+          activeSession={activeSession}
+        />
       </div>
 
       {/* 4. Active Tab Content View */}
