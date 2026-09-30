@@ -9,42 +9,54 @@ export default function SegmentedLedProgress({
   percentage = 0,
   segmentsCount = 24,
   variant = 'capsule', // 'capsule' | 'bar'
-  height = 18,
-  glowColor = '#26FF9E'
+  height = 14,
+  color, // optional color override (defaults to theme electric blue)
+  glowColor,
+  trackBg,
+  inactiveColor,
+  style = {}
 }) {
   const pct = Math.min(100, Math.max(0, percentage));
   const activeSegments = pct > 0 ? Math.max(1, Math.round((pct / 100) * segmentsCount)) : 0;
 
+  // Active theme color (defaults to theme vivid electric blue)
+  const isCustomColor = Boolean(color);
+  const activeColor = color || '#2563EB';
+  const activeGlow = glowColor || (isCustomColor ? activeColor : '#60A5FA');
+
   return (
     <div 
       style={{
-        background: '#0B1320',
+        background: trackBg || '#E2E6ED',
         borderRadius: '10px',
-        padding: '5px 8px',
+        padding: '4px 6px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '3px',
-        boxShadow: 'inset 0 1.5px 4px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(255, 255, 255, 0.8)',
-        border: '1px solid rgba(15, 23, 42, 0.15)',
+        boxShadow: 'inset 2px 2px 5px rgba(166, 175, 195, 0.45), inset -2px -2px 5px rgba(255, 255, 255, 0.85)',
+        border: '1px solid rgba(166, 175, 195, 0.25)',
         width: '100%',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        ...style
       }}
     >
       {Array.from({ length: segmentsCount }).map((_, index) => {
         const isActive = index < activeSegments;
         const isLeading = index === activeSegments - 1;
 
-        let background = 'rgba(16, 185, 129, 0.08)';
+        let background = inactiveColor || 'rgba(166, 175, 195, 0.35)';
         let boxShadow = 'none';
 
         if (isActive) {
           if (isLeading) {
-            background = glowColor;
-            boxShadow = `0 0 8px ${glowColor}, 0 0 12px rgba(38, 255, 158, 0.6)`;
+            background = activeGlow;
+            boxShadow = `0 0 6px ${activeGlow}, 0 0 10px rgba(37, 99, 235, 0.35)`;
           } else {
-            background = 'linear-gradient(180deg, #10B981 0%, #059669 100%)';
-            boxShadow = '0 0 4px rgba(16, 185, 129, 0.35)';
+            background = isCustomColor 
+              ? activeColor 
+              : 'linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%)';
+            boxShadow = '0 1px 3px rgba(37, 99, 235, 0.25)';
           }
         }
 
