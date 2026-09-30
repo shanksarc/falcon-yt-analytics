@@ -124,7 +124,8 @@ export default function ForecastSpeedometerCard({
       setTargetDate(tempDate);
       localStorage.setItem('falcon_forecast_target_date', tempDate);
     }
-    const cleanViews = parseInt(tempViews, 10);
+    const raw = typeof tempViews === 'string' ? tempViews.replace(/[,\s]/g, '') : tempViews;
+    const cleanViews = parseInt(raw, 10);
     if (!isNaN(cleanViews) && cleanViews > 0) {
       setTargetViews(cleanViews);
       localStorage.setItem('falcon_forecast_target_views', cleanViews.toString());
@@ -360,7 +361,7 @@ export default function ForecastSpeedometerCard({
                   type="number"
                   required
                   min="1"
-                  step="100"
+                  step="any"
                   value={tempViews}
                   onChange={(e) => setTempViews(e.target.value)}
                   placeholder="e.g. 50000"
