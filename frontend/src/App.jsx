@@ -20,6 +20,7 @@ import ManageVideoListsModal from './components/ManageVideoListsModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import AdminAuthGate from './components/AdminAuthGate';
 import RightSidebarDock from './components/RightSidebarDock';
+import MobileBottomNav from './components/MobileBottomNav';
 
 import { LayoutDashboard, BarChart3, AlertTriangle, History, Users, Calendar, CheckCircle2 } from 'lucide-react';
 
@@ -36,6 +37,8 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncToast, setSyncToast] = useState(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isRightDockOpen, setIsRightDockOpen] = useState(false);
 
   // Modals
   const [showSettings, setShowSettings] = useState(false);
@@ -188,10 +191,17 @@ export default function App() {
     }
   };
 
+  const handleSelectItem = (item) => {
+    setSelectedInspectorItem(item);
+    if (item) {
+      setIsRightDockOpen(true);
+    }
+  };
+
   return (
     <AdminAuthGate>
       <div className="flex h-screen w-full overflow-hidden bg-[#EBEEF2] text-slate-800 font-sans">
-      {/* 1. Left Sidebar Navigation (<aside> w-60) */}
+      {/* 1. Left Sidebar Navigation (<aside> w-60 / 68px) */}
       <Sidebar
         activeTab={activeTab}
         onSelectTab={handleTabSwitch}
@@ -206,6 +216,8 @@ export default function App() {
         isSyncing={isSyncing}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
+        isMobileOpen={isMobileNavOpen}
+        onCloseMobile={() => setIsMobileNavOpen(false)}
       />
 
       {/* 2. SCROLLABLE MAIN WORKSPACE CANVAS (flex-1) */}
@@ -217,7 +229,10 @@ export default function App() {
           onOpenSettings={() => setShowSettings(true)}
           onSyncChannel={handleSyncChannel}
           isSyncing={isSyncing}
-          onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
+          onToggleCollapse={() => setIsMobileNavOpen(prev => !prev)}
+          onToggleRightDock={() => setIsRightDockOpen(prev => !prev)}
+          isRightDockOpen={isRightDockOpen}
+          hasSelectedItem={Boolean(selectedInspectorItem)}
         />
 
         {/* Global Sync Toast Notification */}
@@ -241,7 +256,7 @@ export default function App() {
         )}
 
         {/* Content Container */}
-        <div style={{ padding: '28px 32px', maxWidth: '1280px', width: '100%', margin: '0 auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div className="main-content-container">
           <ErrorBoundary title="View Error">
             {/* Tab 1: Performance Overview or Drilldown View */}
             {activeTab === 'overview' && (
@@ -264,7 +279,7 @@ export default function App() {
             {activeTab === 'planner' && (
               <UploadPlannerView
                 key={`planner-${refreshKey}`}
-                onSelectItem={setSelectedInspectorItem}
+                onSelectItem={handleSelectItem}
                 selectedItem={selectedInspectorItem}
               />
             )}
@@ -273,7 +288,7 @@ export default function App() {
             {activeTab === 'shorts' && (
               <ShortsPlannerView
                 key={`shorts-${refreshKey}`}
-                onSelectItem={setSelectedInspectorItem}
+                onSelectItem={handleSelectItem}
                 selectedItem={selectedInspectorItem}
               />
             )}
@@ -282,7 +297,7 @@ export default function App() {
             {activeTab === 'manage' && (
               <ManagePlanView
                 key={`manage-${refreshKey}`}
-                onSelectItem={setSelectedInspectorItem}
+                onSelectItem={handleSelectItem}
                 selectedItem={selectedInspectorItem}
               />
             )}
@@ -291,7 +306,7 @@ export default function App() {
             {activeTab === 'syllabus' && (
               <SyllabusMatcherView
                 key={`syllabus-${refreshKey}`}
-                onSelectItem={setSelectedInspectorItem}
+                onSelectItem={handleSelectItem}
                 selectedItem={selectedInspectorItem}
               />
             )}
@@ -334,7 +349,7 @@ export default function App() {
         </footer>
       </main>
 
-      {/* 3. RIGHT DOCK (w-80 / 320px) — Static & Contextual Rail */}
+      {/* 3. RIGHT DOCK — Static (Desktop) & Slide-in Drawer (iPad Air & iPhone 17) */}
       <RightSidebarDock
         activeTab={activeTab}
         status={status}
@@ -343,10 +358,21 @@ export default function App() {
         selectedItem={selectedInspectorItem}
         onClearSelectedItem={() => setSelectedInspectorItem(null)}
         onUpdateItemStatus={handleUpdateInspectorItemStatus}
-        onSelectItem={(item) => setSelectedInspectorItem(item)}
+        onSelectItem={handleSelectItem}
         onOpenLinkModal={(item) => {
           setActiveTab('planner');
         }}
+        isOpen={isRightDockOpen}
+        onClose={() => setIsRightDockOpen(false)}
+      />
+
+      {/* 4. Mobile Bottom Navigation Bar (iPhone 17 & Mobile Screens) */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        onSelectTab={handleTabSwitch}
+        onOpenMenu={() => setIsMobileNavOpen(true)}
+        onOpenInspector={() => setIsRightDockOpen(prev => !prev)}
+        hasSelectedItem={Boolean(selectedInspectorItem)}
       />
 
       {/* Modals */}

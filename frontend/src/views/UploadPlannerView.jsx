@@ -302,84 +302,89 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
       </div>
 
       {/* 2. Sub-Navigation Bar: 3 Core Planner Views */}
-      <div style={{ display: 'inline-flex', background: '#E6EAF0', borderRadius: '9999px', padding: '4px', boxShadow: 'inset 2px 2px 5px rgba(166, 175, 195, 0.5), inset -2px -2px 5px rgba(255, 255, 255, 0.8)', border: 'none', alignSelf: 'flex-start' }}>
-        <nav style={{ display: 'flex', gap: '4px' }}>
-          <button
-            onClick={() => setActiveViewTab('progress')}
-            id="tab-progress-analytics"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '7px',
-              padding: '7px 16px',
-              fontSize: '0.78rem',
-              borderRadius: '9999px',
-              border: 'none',
-              background: activeViewTab === 'progress' ? '#2F65F6' : 'transparent',
-              color: activeViewTab === 'progress' ? '#FFFFFF' : '#64748B',
-              boxShadow: activeViewTab === 'progress' ? '0 2px 8px rgba(47, 101, 246, 0.35)' : 'none',
-              fontWeight: activeViewTab === 'progress' ? 700 : 500,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <BarChart3 size={14} />
-            <span>Progress & Analytics</span>
-          </button>
+      <div className="sub-nav-scroll-container">
+        <div style={{ display: 'inline-flex', background: '#E6EAF0', borderRadius: '9999px', padding: '4px', boxShadow: 'inset 2px 2px 5px rgba(166, 175, 195, 0.5), inset -2px -2px 5px rgba(255, 255, 255, 0.8)', border: 'none', alignSelf: 'flex-start' }}>
+          <nav style={{ display: 'flex', gap: '4px' }}>
+            <button
+              onClick={() => setActiveViewTab('progress')}
+              id="tab-progress-analytics"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '7px',
+                padding: '7px 16px',
+                fontSize: '0.78rem',
+                borderRadius: '9999px',
+                border: 'none',
+                background: activeViewTab === 'progress' ? '#2F65F6' : 'transparent',
+                color: activeViewTab === 'progress' ? '#FFFFFF' : '#64748B',
+                boxShadow: activeViewTab === 'progress' ? '0 2px 8px rgba(47, 101, 246, 0.35)' : 'none',
+                fontWeight: activeViewTab === 'progress' ? 700 : 500,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <BarChart3 size={14} />
+              <span>Progress & Analytics</span>
+            </button>
 
-          <button
-            onClick={() => setActiveViewTab('videos')}
-            id="tab-full-video-list"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '7px',
-              padding: '7px 16px',
-              fontSize: '0.78rem',
-              borderRadius: '9999px',
-              border: 'none',
-              background: activeViewTab === 'videos' ? '#2F65F6' : 'transparent',
-              color: activeViewTab === 'videos' ? '#FFFFFF' : '#64748B',
-              boxShadow: activeViewTab === 'videos' ? '0 2px 8px rgba(47, 101, 246, 0.35)' : 'none',
-              fontWeight: activeViewTab === 'videos' ? 700 : 500,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <ListVideo size={14} />
-            <span>Full Video List</span>
-            <span style={{ padding: '2px 7px', background: activeViewTab === 'videos' ? 'rgba(255, 255, 255, 0.25)' : '#CBD5E1', color: activeViewTab === 'videos' ? '#FFFFFF' : '#475569', borderRadius: '9999px', fontSize: '10px', fontWeight: 600 }}>
-              {allPlannedVideos.length}
-            </span>
-          </button>
+            <button
+              onClick={() => setActiveViewTab('videos')}
+              id="tab-full-video-list"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '7px',
+                padding: '7px 16px',
+                fontSize: '0.78rem',
+                borderRadius: '9999px',
+                border: 'none',
+                background: activeViewTab === 'videos' ? '#2F65F6' : 'transparent',
+                color: activeViewTab === 'videos' ? '#FFFFFF' : '#64748B',
+                boxShadow: activeViewTab === 'videos' ? '0 2px 8px rgba(47, 101, 246, 0.35)' : 'none',
+                fontWeight: activeViewTab === 'videos' ? 700 : 500,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <ListVideo size={14} />
+              <span>Full Video List</span>
+              <span style={{ padding: '2px 7px', background: activeViewTab === 'videos' ? 'rgba(255, 255, 255, 0.25)' : '#CBD5E1', color: activeViewTab === 'videos' ? '#FFFFFF' : '#475569', borderRadius: '9999px', fontSize: '10px', fontWeight: 600 }}>
+                {allPlannedVideos.length}
+              </span>
+            </button>
 
-          <button
-            onClick={() => setActiveViewTab('schedule')}
-            id="tab-weekly-schedule"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '7px',
-              padding: '7px 16px',
-              fontSize: '0.78rem',
-              borderRadius: '9999px',
-              border: 'none',
-              background: activeViewTab === 'schedule' ? '#2F65F6' : 'transparent',
-              color: activeViewTab === 'schedule' ? '#FFFFFF' : '#64748B',
-              boxShadow: activeViewTab === 'schedule' ? '0 2px 8px rgba(47, 101, 246, 0.35)' : 'none',
-              fontWeight: activeViewTab === 'schedule' ? 700 : 500,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <Calendar size={14} />
-            <span>Weekly Schedule</span>
-          </button>
-        </nav>
+            <button
+              onClick={() => setActiveViewTab('schedule')}
+              id="tab-weekly-schedule"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '7px',
+                padding: '7px 16px',
+                fontSize: '0.78rem',
+                borderRadius: '9999px',
+                border: 'none',
+                background: activeViewTab === 'schedule' ? '#2F65F6' : 'transparent',
+                color: activeViewTab === 'schedule' ? '#FFFFFF' : '#64748B',
+                boxShadow: activeViewTab === 'schedule' ? '0 2px 8px rgba(47, 101, 246, 0.35)' : 'none',
+                fontWeight: activeViewTab === 'schedule' ? 700 : 500,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Calendar size={14} />
+              <span>Weekly Schedule</span>
+            </button>
+          </nav>
+        </div>
       </div>
 
       {/* 3. Consolidated KPI Metrics Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '14px', width: '100%' }}>
+      <div className="planner-kpi-grid">
         {/* Card 1: Forecast Speedometer */}
         <ForecastSpeedometerCard
           plannedVideos={allPlannedVideos}

@@ -1171,3 +1171,193 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 11px;
   padding-top: 0.6rem;
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Responsive Layout & Device Adaptation (iPad Air & iPhone 17)
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Main Scrollable Content Container */
+.main-content-container {
+  padding: 24px 28px;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-sizing: border-box;
+}
+
+/* Overview KPI Grid */
+.overview-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+/* Sub-Navigation Pill Tabs Horizontal Scroller */
+.sub-nav-scroll-container {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.sub-nav-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Right Sidebar Dock (Desktop vs Responsive Drawer) */
+.right-sidebar-dock-responsive {
+  width: 320px;
+  min-width: 320px;
+  height: 100%;
+  background: #EBEEF2;
+  border-left: 1px solid rgba(166, 175, 195, 0.35);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease;
+}
+
+/* Mobile Bottom Navigation Bar (iPhone 17 & Mobile) */
+.mobile-bottom-nav {
+  display: none;
+}
+
+/* Tablet (iPad Air: 820px portrait / 1180px landscape, 768px - 1199px) */
+@media (max-width: 1199px) {
+  .right-sidebar-dock-responsive {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(340px, 86vw);
+    min-width: unset;
+    z-index: 80;
+    box-shadow: -8px 0 28px rgba(15, 23, 42, 0.16);
+    transform: translateX(100%);
+    pointer-events: none;
+  }
+
+  .right-sidebar-dock-responsive.open {
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+}
+
+@media (max-width: 1024px) {
+  .main-content-container {
+    padding: 20px 18px;
+    gap: 16px;
+  }
+
+  .planner-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px;
+  }
+
+  .overview-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px;
+  }
+}
+
+/* Mobile (iPhone 17: ~393px - 402px, < 768px) */
+@media (max-width: 767px) {
+  .app-left-sidebar-desktop {
+    display: none !important;
+  }
+
+  .main-content-container {
+    padding: 14px 12px calc(74px + env(safe-area-inset-bottom, 12px)) 12px;
+    gap: 14px;
+  }
+
+  .planner-kpi-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  .overview-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+  }
+
+  /* Mobile Bottom Navigation Bar */
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(56px + env(safe-area-inset-bottom, 8px));
+    padding-bottom: env(safe-area-inset-bottom, 8px);
+    background: rgba(240, 243, 247, 0.95);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(166, 175, 195, 0.4);
+    z-index: 60;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.05);
+    justify-content: space-around;
+    align-items: center;
+    box-sizing: border-box;
+  }
+
+  .mobile-nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justifyContent: center;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    color: #64748B;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 4px 0;
+    transition: color 0.15s ease;
+    user-select: none;
+    font-family: inherit;
+  }
+
+  .mobile-nav-btn.active {
+    color: #2563EB;
+    font-weight: 700;
+  }
+
+  .mobile-nav-icon-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justifyContent: center;
+    padding: 3px 12px;
+    border-radius: 9999px;
+    transition: background 0.15s ease;
+  }
+
+  .mobile-nav-btn.active .mobile-nav-icon-wrap {
+    background: rgba(37, 99, 235, 0.12);
+  }
+
+  /* Compact Modal on Mobile */
+  .modal-content {
+    padding: 1.25rem 1rem !important;
+    border-radius: 20px !important;
+    max-height: 90vh !important;
+    width: 95vw !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .overview-kpi-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+}

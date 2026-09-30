@@ -182,7 +182,7 @@ export default function PerformanceOverviewView({ onNavigateDrilldown }) {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '16px' }}>
+        <div className="overview-kpi-grid">
           <div style={styles.kpiCard}>
             <div style={styles.kpiLabel}>Views</div>
             <div style={styles.kpiValue}>

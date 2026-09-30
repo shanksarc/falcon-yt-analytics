@@ -10,7 +10,8 @@ import {
   Users2,
   Settings,
   RefreshCw,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 
 const navItems = [
@@ -33,29 +34,39 @@ export default function Sidebar({
   syllabusQueueCount = 0,
   onOpenSettings,
   onSyncChannel,
-  isSyncing = false
+  isSyncing = false,
+  isMobileOpen = false,
+  onCloseMobile
 }) {
   const displayLowCtrCount = lowCtrCount > 0 ? lowCtrCount : 16;
 
+  const handleNavClick = (id) => {
+    onSelectTab(id);
+    if (onCloseMobile) onCloseMobile();
+  };
+
   return (
-    <aside
-      id="app-left-sidebar"
-      style={{
-        width: '68px',
-        minWidth: '68px',
-        height: '100%',
-        background: '#EBEEF2',
-        borderRight: '1px solid rgba(166, 175, 195, 0.35)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '16px 8px',
-        flexShrink: 0,
-        boxSizing: 'border-box',
-        zIndex: 30
-      }}
-    >
+    <>
+      {/* ─── DESKTOP & TABLET (iPad Air) ICON BAR (>= 768px) ─── */}
+      <aside
+        id="app-left-sidebar"
+        className="app-left-sidebar-desktop"
+        style={{
+          width: '68px',
+          minWidth: '68px',
+          height: '100%',
+          background: '#EBEEF2',
+          borderRight: '1px solid rgba(166, 175, 195, 0.35)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '16px 8px',
+          flexShrink: 0,
+          boxSizing: 'border-box',
+          zIndex: 30
+        }}
+      >
       {/* ─── TOP SECTION: Brand Logo & Sync Button ─── */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', width: '100%' }}>
         
@@ -279,5 +290,200 @@ export default function Sidebar({
         />
       </div>
     </aside>
+
+    {/* ─── MOBILE SLIDE-IN NAVIGATION DRAWER (iPhone 17 & Small Screens) ─── */}
+    {isMobileOpen && (
+      <div 
+        id="mobile-nav-drawer-wrapper"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 100,
+          display: 'flex'
+        }}
+      >
+        {/* Backdrop Overlay */}
+        <div
+          onClick={onCloseMobile}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.5)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)'
+          }}
+        />
+
+        {/* Drawer Menu Surface */}
+        <aside
+          style={{
+            position: 'relative',
+            width: 'min(290px, 82vw)',
+            height: '100%',
+            background: '#EBEEF2',
+            boxShadow: '6px 0 28px rgba(0, 0, 0, 0.2)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            padding: '20px 16px',
+            boxSizing: 'border-box',
+            zIndex: 1,
+            overflowY: 'auto'
+          }}
+        >
+          {/* Drawer Header */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #3A72F8 0%, #2054E2 100%)',
+                    color: '#FFFFFF',
+                    fontWeight: 800,
+                    fontSize: '15px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 10px rgba(47, 101, 246, 0.35)'
+                  }}
+                >
+                  F
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 800, color: '#1E293B', lineHeight: 1.2 }}>Falcon YT</div>
+                  <div style={{ fontSize: '11px', color: '#64748B' }}>Analytics Platform</div>
+                </div>
+              </div>
+
+              <button
+                onClick={onCloseMobile}
+                style={{
+                  padding: '6px',
+                  borderRadius: '8px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#64748B',
+                  cursor: 'pointer'
+                }}
+                title="Close Navigation"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Sync & Quick Action Bar */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={onSyncChannel}
+                disabled={isSyncing}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  padding: '8px 12px',
+                  borderRadius: '10px',
+                  background: '#F0F3F7',
+                  border: '1px solid rgba(166, 175, 195, 0.4)',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: '#1E293B',
+                  cursor: 'pointer'
+                }}
+              >
+                <RefreshCw size={13} className={isSyncing ? 'animate-spin' : ''} />
+                <span>{isSyncing ? 'Syncing...' : 'Sync Channel'}</span>
+              </button>
+            </div>
+
+            {/* Navigation List */}
+            <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
+              {navItems.map((item) => {
+                const IconComponent = item.icon;
+                const isActive = activeTab === item.id;
+                let badgeVal = 0;
+                if (item.id === 'low-ctr') badgeVal = displayLowCtrCount;
+                if (item.id === 'planner') badgeVal = plannerQueueCount;
+                if (item.id === 'syllabus') badgeVal = syllabusQueueCount;
+
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavClick(item.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 14px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      background: isActive ? '#2F65F6' : 'transparent',
+                      color: isActive ? '#FFFFFF' : '#334155',
+                      fontWeight: isActive ? 700 : 500,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <IconComponent size={18} />
+                      <span>{item.label}</span>
+                    </div>
+
+                    {badgeVal > 0 && (
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          padding: '1px 6px',
+                          borderRadius: '9999px',
+                          background: isActive ? 'rgba(255, 255, 255, 0.25)' : (item.id === 'low-ctr' ? '#EF4444' : '#2F65F6'),
+                          color: '#FFFFFF'
+                        }}
+                      >
+                        {badgeVal}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Drawer Footer: Settings */}
+          <div style={{ paddingTop: '16px', borderTop: '1px solid rgba(166, 175, 195, 0.3)' }}>
+            <button
+              onClick={() => {
+                onOpenSettings();
+                if (onCloseMobile) onCloseMobile();
+              }}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '10px 14px',
+                borderRadius: '12px',
+                border: 'none',
+                background: 'transparent',
+                color: '#64748B',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              <Settings size={18} />
+              <span>Settings & Preferences</span>
+            </button>
+          </div>
+        </aside>
+      </div>
+    )}
+  </>
   );
 }

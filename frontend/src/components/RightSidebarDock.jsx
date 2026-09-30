@@ -46,7 +46,9 @@ export default function RightSidebarDock({
   onClearSelectedItem,
   onUpdateItemStatus,
   onSelectItem,
-  onOpenLinkModal
+  onOpenLinkModal,
+  isOpen = false,
+  onClose
 }) {
   const [youtubeStats, setYoutubeStats] = useState(null);
   const [uploadedCount, setUploadedCount] = useState(0);
@@ -189,83 +191,113 @@ export default function RightSidebarDock({
     .slice(0, 4);
 
   return (
-    <aside
-      id="right-sidebar-dock"
-      style={{
-        width: '320px',
-        minWidth: '320px',
-        height: '100%',
-        background: '#EBEEF2',
-        borderLeft: '1px solid rgba(166, 175, 195, 0.35)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        flexShrink: 0,
-        boxSizing: 'border-box'
-      }}
-    >
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* SECTION 1 (STATIC PART): YouTube Impact + Planned Videos Queue */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      <div
-        id="right-dock-static-section"
-        style={{
-          padding: '14px 14px 12px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          borderBottom: '1px solid rgba(166, 175, 195, 0.35)',
-          flexShrink: 0,
-          background: 'rgba(235, 238, 242, 0.95)',
-          maxHeight: '62vh',
-          overflowY: 'auto'
-        }}
-      >
-        {/* Header & Channel Status Badge */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div
-              style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '6px',
-                background: 'rgba(255, 0, 0, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <PlaySquare size={14} color="#FF0000" />
-            </div>
-            <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B', letterSpacing: '-0.01em' }}>
-              YouTube Impact
-            </span>
-          </div>
+    <>
+      {/* Mobile & Tablet Backdrop Overlay */}
+      {isOpen && (
+        <div
+          onClick={onClose}
+          id="right-dock-backdrop"
+          className="xl:hidden"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.45)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            zIndex: 75
+          }}
+        />
+      )}
 
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '2px 8px',
-              borderRadius: '9999px',
-              fontSize: '10px',
-              fontWeight: 700,
-              background: status?.has_api_key ? 'rgba(13, 148, 136, 0.12)' : 'rgba(234, 88, 12, 0.12)',
-              color: status?.has_api_key ? '#0D9488' : '#EA580C'
-            }}
-          >
-            <span
-              style={{
-                width: '5px',
-                height: '5px',
-                borderRadius: '50%',
-                backgroundColor: status?.has_api_key ? '#0D9488' : '#EA580C'
-              }}
-            />
-            {status?.demo_mode ? 'Demo Mode' : (status?.has_api_key ? 'Live Channel' : 'Offline')}
-          </span>
-        </div>
+      <aside
+        id="right-sidebar-dock"
+        className={`right-sidebar-dock-responsive ${isOpen ? 'open' : ''}`}
+      >
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* SECTION 1 (STATIC PART): YouTube Impact + Planned Videos Queue */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <div
+          id="right-dock-static-section"
+          style={{
+            padding: '14px 14px 12px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            borderBottom: '1px solid rgba(166, 175, 195, 0.35)',
+            flexShrink: 0,
+            background: 'rgba(235, 238, 242, 0.95)',
+            maxHeight: '62vh',
+            overflowY: 'auto'
+          }}
+        >
+          {/* Header & Channel Status Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div
+                style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '6px',
+                  background: 'rgba(255, 0, 0, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <PlaySquare size={14} color="#FF0000" />
+              </div>
+              <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B', letterSpacing: '-0.01em' }}>
+                YouTube Impact
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '2px 8px',
+                  borderRadius: '9999px',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  background: status?.has_api_key ? 'rgba(13, 148, 136, 0.12)' : 'rgba(234, 88, 12, 0.12)',
+                  color: status?.has_api_key ? '#0D9488' : '#EA580C'
+                }}
+              >
+                <span
+                  style={{
+                    width: '5px',
+                    height: '5px',
+                    borderRadius: '50%',
+                    backgroundColor: status?.has_api_key ? '#0D9488' : '#EA580C'
+                  }}
+                />
+                {status?.has_api_key ? 'Synced' : 'Demo'}
+              </span>
+
+              {/* Mobile / Tablet Close Button */}
+              {onClose && (
+                <button
+                  onClick={onClose}
+                  className="xl:hidden"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#64748B',
+                    padding: '2px 4px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  title="Close Inspector Drawer"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          </div>
 
         {/* 1. YouTube Impact Card */}
         <div
@@ -1183,5 +1215,6 @@ export default function RightSidebarDock({
         )}
       </div>
     </aside>
+  </>
   );
 }
