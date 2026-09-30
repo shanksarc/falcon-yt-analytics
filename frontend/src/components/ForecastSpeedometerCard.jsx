@@ -197,8 +197,8 @@ export default function ForecastSpeedometerCard({
         </div>
 
         {/* Speedometer Gauge Dial */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '-4px 0 -8px 0' }}>
-          <svg width="160" height="78" viewBox="0 0 160 78" style={{ overflow: 'visible' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '-4px 0 -8px 0', width: '100%' }}>
+          <svg viewBox="0 0 160 78" style={{ width: '100%', maxWidth: '124px', height: 'auto', overflow: 'visible' }}>
             <defs>
               <linearGradient id="forecastSpeedoGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#3B82F6" />
@@ -261,15 +261,15 @@ export default function ForecastSpeedometerCard({
 
         {/* Bottom Numbers Row */}
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
-            <span style={{ fontSize: '1.45rem', fontWeight: 800, color: '#1E293B', lineHeight: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', flexWrap: 'wrap' }}>
+            <span className="kpi-num" style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1E293B', lineHeight: 1 }}>
               {formatCompactNum(stats.forecastedViews)}
             </span>
-            <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
+            <span className="kpi-sub" style={{ fontSize: '0.72rem', color: '#64748B' }}>
               / {formatCompactNum(stats.effectiveTargetViews)}
             </span>
           </div>
-          <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 600 }}>
+          <span style={{ fontSize: '9px', color: '#94A3B8', fontWeight: 600, whiteSpace: 'nowrap' }}>
             {targetDate ? new Date(targetDate + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Set date'}
           </span>
         </div>

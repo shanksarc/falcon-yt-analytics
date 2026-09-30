@@ -202,7 +202,7 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
   const activeSession = overview?.sessions?.find(s => s.id === selectedSessionId) || overview?.sessions?.[0];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
       {/* 1. Top Bar: Header & Actions */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -401,12 +401,12 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          minHeight: '126px'
+          minHeight: '120px'
         }}>
           {/* Top Header Row */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Lectures Progress
+            <span style={{ fontSize: '10px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Lectures
             </span>
             <div style={{
               display: 'inline-flex',
@@ -417,28 +417,29 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
               padding: '2px 7px',
               borderRadius: '9999px',
               background: kpiStats.lecturesPct >= 100 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(37, 99, 235, 0.1)',
-              color: kpiStats.lecturesPct >= 100 ? '#059669' : '#2563EB'
+              color: kpiStats.lecturesPct >= 100 ? '#059669' : '#2563EB',
+              whiteSpace: 'nowrap'
             }}>
               {kpiStats.lecturesPct}%
             </div>
           </div>
 
-          {/* Center: Segmented LED Progress Bar matching template */}
-          <div style={{ margin: '6px 0' }}>
-            <SegmentedLedProgress percentage={kpiStats.lecturesPct} />
+          {/* Center: Segmented LED Progress Bar */}
+          <div style={{ margin: '4px 0' }}>
+            <SegmentedLedProgress percentage={kpiStats.lecturesPct} segmentsCount={16} height={11} />
           </div>
 
           {/* Bottom Numbers Row */}
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
-              <span style={{ fontSize: '1.45rem', fontWeight: 800, color: '#1E293B', lineHeight: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', flexWrap: 'wrap' }}>
+              <span className="kpi-num" style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1E293B', lineHeight: 1 }}>
                 {kpiStats.lecturesUploaded}
               </span>
-              <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
-                / {kpiStats.lecturesTotal} lectures
+              <span className="kpi-sub" style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                / {kpiStats.lecturesTotal} vids
               </span>
             </div>
-            <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 600 }}>
+            <span style={{ fontSize: '9px', color: '#94A3B8', fontWeight: 600, whiteSpace: 'nowrap' }}>
               {Math.max(0, kpiStats.lecturesTotal - kpiStats.lecturesUploaded)} left
             </span>
           </div>
@@ -454,12 +455,12 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          minHeight: '126px'
+          minHeight: '120px'
         }}>
           {/* Top Header Row */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Shorts Progress
+            <span style={{ fontSize: '10px', fontWeight: 800, color: '#EA580C', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Shorts
             </span>
             <div style={{
               display: 'inline-flex',
@@ -469,35 +470,36 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
               fontWeight: 600,
               padding: '2px 7px',
               borderRadius: '9999px',
-              background: kpiStats.shortsPct >= 100 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(37, 99, 235, 0.1)',
-              color: kpiStats.shortsPct >= 100 ? '#059669' : '#2563EB'
+              background: kpiStats.shortsPct >= 100 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(234, 88, 12, 0.1)',
+              color: kpiStats.shortsPct >= 100 ? '#059669' : '#EA580C',
+              whiteSpace: 'nowrap'
             }}>
               {kpiStats.shortsPct}%
             </div>
           </div>
 
-          {/* Center: Segmented LED Progress Bar matching template */}
-          <div style={{ margin: '6px 0' }}>
-            <SegmentedLedProgress percentage={kpiStats.shortsPct} />
+          {/* Center: Segmented LED Progress Bar */}
+          <div style={{ margin: '4px 0' }}>
+            <SegmentedLedProgress percentage={kpiStats.shortsPct} segmentsCount={16} height={11} color="#EA580C" glowColor="#FB923C" />
           </div>
 
           {/* Bottom Numbers Row */}
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px' }}>
-              <span style={{ fontSize: '1.45rem', fontWeight: 800, color: '#1E293B', lineHeight: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', flexWrap: 'wrap' }}>
+              <span className="kpi-num" style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1E293B', lineHeight: 1 }}>
                 {kpiStats.shortsUploaded}
               </span>
-              <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
+              <span className="kpi-sub" style={{ fontSize: '0.72rem', color: '#64748B' }}>
                 / {kpiStats.shortsTotal} shorts
               </span>
             </div>
-            <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 600 }}>
+            <span style={{ fontSize: '9px', color: '#94A3B8', fontWeight: 600, whiteSpace: 'nowrap' }}>
               {Math.max(0, kpiStats.shortsTotal - kpiStats.shortsUploaded)} left
             </span>
           </div>
         </div>
 
-        {/* Card 4: Blank card */}
+        {/* Card 4: Total Pipeline */}
         <div style={{
           background: '#F0F3F7',
           border: '1px solid rgba(255, 255, 255, 0.8)',
@@ -507,8 +509,49 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          minHeight: '126px'
-        }} />
+          minHeight: '120px'
+        }}>
+          {/* Top Header Row */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '10px', fontWeight: 800, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Total Pipeline
+            </span>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '10px',
+              fontWeight: 600,
+              padding: '2px 7px',
+              borderRadius: '9999px',
+              background: 'rgba(124, 58, 237, 0.1)',
+              color: '#7C3AED',
+              whiteSpace: 'nowrap'
+            }}>
+              {kpiStats.velocityPct}% Done
+            </div>
+          </div>
+
+          {/* Center: Segmented LED Progress Bar */}
+          <div style={{ margin: '4px 0' }}>
+            <SegmentedLedProgress percentage={kpiStats.velocityPct} segmentsCount={16} height={11} color="#7C3AED" glowColor="#A78BFA" />
+          </div>
+
+          {/* Bottom Numbers Row */}
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', flexWrap: 'wrap' }}>
+              <span className="kpi-num" style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1E293B', lineHeight: 1 }}>
+                {kpiStats.totalUploaded}
+              </span>
+              <span className="kpi-sub" style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                / {kpiStats.totalVideos} total
+              </span>
+            </div>
+            <span style={{ fontSize: '9px', color: '#94A3B8', fontWeight: 600, whiteSpace: 'nowrap' }}>
+              {kpiStats.totalBacklog} queued
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* 4. Active Tab Content View */}

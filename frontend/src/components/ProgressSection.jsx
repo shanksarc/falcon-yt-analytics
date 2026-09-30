@@ -1014,19 +1014,35 @@ export default function ProgressSection({
           </div>
         </div>
 
-        {/* Card 2: Burnup Pace */}
+        {/* Card 2: Burnup Pace (Aug 2026 Horizon with Rich Actionable Context) */}
         <div className="overview-block-card" style={{ padding: '1.25rem', background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-            <div>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)' }} title="Ideal pace vs actual uploads">
-                <TrendingUp size={15} color={statusColor} />
+          {/* Header Row: Title, Delta Status Badge & Legend */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)' }} title="Ideal pace trajectory vs actual uploads starting from August 2026">
+                <TrendingUp size={16} color={statusColor} />
                 <span>Burnup Pace</span>
               </h4>
+              {burnup_chart?.pace_delta !== undefined && (
+                <span style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  padding: '2px 7px',
+                  borderRadius: '9999px',
+                  background: burnup_chart.pace_delta < 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                  color: burnup_chart.pace_delta < 0 ? '#EF4444' : '#10B981'
+                }}>
+                  {burnup_chart.pace_delta < 0 
+                    ? `${Math.abs(Math.round(burnup_chart.pace_delta))} behind pace` 
+                    : `+${Math.round(burnup_chart.pace_delta)} ahead of pace`}
+                </span>
+              )}
             </div>
+
             <div style={{ display: 'flex', gap: '0.6rem', fontSize: '0.68rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                <span style={{ width: '10px', height: '2px', background: 'var(--text-muted)', borderTop: '2px dashed var(--text-muted)' }} />
-                <span style={{ color: 'var(--text-muted)' }}>Ideal</span>
+                <span style={{ width: '10px', height: '2px', background: '#94A3B8', borderTop: '2px dashed #94A3B8' }} />
+                <span style={{ color: '#64748B' }}>Ideal</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                 <span style={{ width: '10px', height: '2.5px', background: statusColor, borderRadius: '2px' }} />
@@ -1035,6 +1051,38 @@ export default function ProgressSection({
             </div>
           </div>
 
+          {/* Inset Pacing Context Row: Required pace, Current velocity, Time remaining */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '6px',
+            background: '#E6EAF0',
+            padding: '6px 10px',
+            borderRadius: '10px',
+            marginBottom: '0.65rem',
+            boxShadow: 'inset 1px 1px 3px rgba(166, 175, 195, 0.4), inset -1px -1px 3px rgba(255, 255, 255, 0.8)'
+          }}>
+            <div>
+              <div style={{ fontSize: '9px', fontWeight: 600, color: '#64748B', textTransform: 'uppercase' }}>Need Pace</div>
+              <div style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B' }}>
+                {burnup_chart?.pace_needed ?? pacing?.pace_needed ?? 0} <span style={{ fontSize: '9px', fontWeight: 500, color: '#64748B' }}>v/wk</span>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: '9px', fontWeight: 600, color: '#64748B', textTransform: 'uppercase' }}>Current Pace</div>
+              <div style={{ fontSize: '12px', fontWeight: 800, color: statusColor }}>
+                {burnup_chart?.velocity ?? pacing?.velocity ?? 0} <span style={{ fontSize: '9px', fontWeight: 500, color: '#64748B' }}>v/wk</span>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: '9px', fontWeight: 600, color: '#64748B', textTransform: 'uppercase' }}>Time Left</div>
+              <div style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B' }}>
+                {burnup_chart?.weeks_remaining ?? pacing?.weeks_remaining ?? 0} <span style={{ fontSize: '9px', fontWeight: 500, color: '#64748B' }}>wks</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SVG Chart Area */}
           <div style={{ width: '100%', overflowX: 'auto', flex: 1, display: 'flex', alignItems: 'center' }}>
             <svg viewBox={`0 0 ${bSvgWidth} ${bSvgHeight}`} style={{ width: '100%', height: 'auto', minWidth: '280px' }}>
               {[0, 0.5, 1].map((ratio, i) => {
@@ -1049,26 +1097,59 @@ export default function ProgressSection({
                 );
               })}
 
-              {idealPath && (
-                <path d={idealPath} fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeDasharray="4 4" />
+              {/* Target Line Ceiling */}
+              {target > 0 && target <= maxBurnupVal && (
+                <g>
+                  <line
+                    x1={bPadX}
+                    y1={getBy(target)}
+                    x2={bSvgWidth - bPadX}
+                    y2={getBy(target)}
+                    stroke="rgba(37, 99, 235, 0.35)"
+                    strokeWidth="1.2"
+                    strokeDasharray="4 2"
+                  />
+                  <text
+                    x={bSvgWidth - bPadX}
+                    y={Math.max(12, getBy(target) - 3)}
+                    fill="#2563EB"
+                    fontSize="8.5"
+                    fontWeight="700"
+                    textAnchor="end"
+                  >
+                    Target: {target}
+                  </text>
+                </g>
               )}
 
+              {/* Ideal Pace Trajectory */}
+              {idealPath && (
+                <path d={idealPath} fill="none" stroke="#94A3B8" strokeWidth="2" strokeDasharray="4 4" />
+              )}
+
+              {/* Actual Upload Line */}
               {actualPath && (
                 <path d={actualPath} fill="none" stroke={statusColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               )}
 
+              {/* Actual Data Points with Rich Tooltip */}
               {actualPoints.map(({ pt, idx }) => {
                 const cx = getBx(idx);
                 const cy = getBy(pt.actual);
                 const isHovered = hoveredPoint === `burnup_${idx}`;
+                const ptIdeal = Math.round(pt.ideal || 0);
+                const ptGap = pt.actual - ptIdeal;
                 return (
                   <g key={idx} onMouseEnter={() => setHoveredPoint(`burnup_${idx}`)} onMouseLeave={() => setHoveredPoint(null)} style={{ cursor: 'pointer' }}>
                     <circle cx={cx} cy={cy} r={isHovered ? 6 : 4} fill={statusColor} stroke="var(--bg-surface)" strokeWidth="2" />
                     {isHovered && (
                       <g>
-                        <rect x={cx - 35} y={cy - 28} width="70" height="20" rx="4" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" />
-                        <text x={cx} y={cy - 14} fill="var(--text-primary)" fontSize="10" fontWeight="bold" textAnchor="middle">
-                          {pt.actual} vids
+                        <rect x={Math.min(bSvgWidth - 92, Math.max(10, cx - 45))} y={Math.max(4, cy - 36)} width="90" height="30" rx="5" fill="#1E293B" opacity="0.95" />
+                        <text x={Math.min(bSvgWidth - 47, Math.max(55, cx))} y={Math.max(18, cy - 22)} fill="#FFFFFF" fontSize="9" fontWeight="bold" textAnchor="middle">
+                          {pt.label}: {pt.actual} vids
+                        </text>
+                        <text x={Math.min(bSvgWidth - 47, Math.max(55, cx))} y={Math.max(28, cy - 12)} fill={ptGap < 0 ? '#F87171' : '#34D399'} fontSize="8" textAnchor="middle">
+                          {ptGap < 0 ? `${Math.abs(ptGap)} behind ideal` : `+${ptGap} vs ideal`}
                         </text>
                       </g>
                     )}
@@ -1076,6 +1157,7 @@ export default function ProgressSection({
                 );
               })}
 
+              {/* Timeline X-Axis Dates */}
               {burnupTimeline.map((pt, i) => {
                 if (i % 2 !== 0 && i !== burnupTimeline.length - 1) return null;
                 const x = getBx(i);

@@ -461,8 +461,8 @@ def generate_seed_data():
     # Upload Planner Seed Data (Sessions, Targets, Planned Entries)
     # -------------------------------------------------------------
     sessions_seed = [
-        ("session_cfa_nov_2026", "CFA Nov 2026 Exam Window", "2026-07-01", "2026-11-25", 1),
-        ("session_frm_nov_2026", "FRM Nov 2026 Exam Window", "2026-07-01", "2026-11-20", 1),
+        ("session_cfa_nov_2026", "CFA Nov 2026 Exam Window", "2026-08-01", "2026-11-25", 1),
+        ("session_frm_nov_2026", "FRM Nov 2026 Exam Window", "2026-08-01", "2026-11-20", 1),
         ("session_cfa_feb_2027", "CFA Feb 2027 Exam Window", "2026-10-01", "2027-02-28", 1),
         ("session_cfa_may_2027", "CFA May 2027 Exam Window", "2026-11-01", "2027-05-31", 1),
     ]

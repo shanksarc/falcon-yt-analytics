@@ -1662,6 +1662,94 @@ def validate_planner_entries(raw_entries: List[Dict[str, Any]]) -> List[Dict[str
 # Phase 4: Progress Section Analytics
 # -------------------------------------------------------------
 
+def compute_burnup_data(start_date_str: str, end_date_str: str, target_count: int, uploaded_count: int, upload_dates: List[str], pacing: Dict[str, Any], now: Optional[datetime] = None) -> Dict[str, Any]:
+    """
+    Computes burnup chart timeline starting from August 2026 (or campaign start),
+    along with comprehensive pacing analytics, ideal progress, and schedule deltas.
+    """
+    if now is None:
+        now = datetime.now()
+
+    # Planned video horizon starts around August 2026
+    EARLIEST_BURNUP_START = datetime(2026, 8, 1)
+
+    try:
+        start_dt = datetime.strptime(start_date_str, "%Y-%m-%d")
+        if start_dt < EARLIEST_BURNUP_START:
+            start_dt = EARLIEST_BURNUP_START
+        end_dt = datetime.strptime(end_date_str, "%Y-%m-%d")
+    except Exception:
+        start_dt = EARLIEST_BURNUP_START
+        end_dt = now + timedelta(days=60)
+
+    if end_dt <= start_dt:
+        end_dt = start_dt + timedelta(days=90)
+
+    total_days = max(1, (end_dt - start_dt).days)
+    steps = 10
+    interval_days = max(7, total_days // steps)
+
+    effective_target = target_count if target_count > 0 else max(1, uploaded_count)
+
+    burnup_timeline = []
+    curr_t = start_dt
+    while curr_t <= end_dt:
+        date_str = curr_t.strftime("%Y-%m-%d")
+        label = curr_t.strftime("%b %d")
+        frac = min(1.0, max(0.0, (curr_t - start_dt).days / total_days))
+        ideal_val = round(frac * effective_target, 1)
+
+        if curr_t <= now:
+            actual_val = sum(1 for d in upload_dates if d <= date_str)
+            if not upload_dates and uploaded_count > 0:
+                actual_val = min(uploaded_count, round(frac * uploaded_count))
+        else:
+            actual_val = None
+
+        burnup_timeline.append({
+            "date": date_str,
+            "label": label,
+            "ideal": ideal_val,
+            "actual": actual_val
+        })
+        curr_t += timedelta(days=interval_days)
+
+    last_label = end_dt.strftime("%b %d")
+    if not burnup_timeline or burnup_timeline[-1]["label"] != last_label:
+        burnup_timeline.append({
+            "date": end_dt.strftime("%Y-%m-%d"),
+            "label": last_label,
+            "ideal": effective_target,
+            "actual": uploaded_count if end_dt <= now else None
+        })
+
+    # Pacing context & delta at current point in time
+    if now >= end_dt:
+        ideal_at_now = float(effective_target)
+    elif now <= start_dt:
+        ideal_at_now = 0.0
+    else:
+        ideal_at_now = round(((now - start_dt).days / total_days) * effective_target, 1)
+
+    actual_at_now = uploaded_count
+    pace_delta = round(actual_at_now - ideal_at_now, 1)
+
+    return {
+        "timeline": burnup_timeline,
+        "target": target_count,
+        "status_color": pacing.get("color", "#3EA65E"),
+        "pace_needed": pacing.get("pace_needed", 0),
+        "velocity": pacing.get("velocity", 0),
+        "weeks_remaining": pacing.get("weeks_remaining", 0),
+        "ideal_at_now": ideal_at_now,
+        "actual_at_now": actual_at_now,
+        "pace_delta": pace_delta,
+        "status_label": pacing.get("status_label", "On Track"),
+        "status": pacing.get("status", "ON_TRACK"),
+        "start_date": start_dt.strftime("%Y-%m-%d"),
+        "end_date": end_dt.strftime("%Y-%m-%d")
+    }
+
 def get_session_progress_analytics(session_id: Optional[str] = None, course_id: Optional[str] = None) -> Dict[str, Any]:
     """
     Multi-tiered progress analytics:
@@ -1846,13 +1934,16 @@ def get_session_progress_analytics(session_id: Optional[str] = None, course_id: 
         if session_id and session_id not in ("ALL", "", "evergreen"):
             cursor.execute("SELECT start_date, end_date FROM sessions WHERE id = ?", (session_id,))
             s_dates = cursor.fetchone()
-            start_date_str = s_dates["start_date"] if s_dates else "2026-07-01"
+            start_date_str = s_dates["start_date"] if s_dates else "2026-08-01"
             end_date_str = s_dates["end_date"] if s_dates else "2026-11-25"
         else:
             cursor.execute("SELECT MIN(start_date) as min_s, MAX(end_date) as max_e FROM sessions WHERE is_active = 1")
             s_dates = cursor.fetchone()
-            start_date_str = s_dates["min_s"] if s_dates and s_dates["min_s"] else "2026-07-01"
+            start_date_str = s_dates["min_s"] if s_dates and s_dates["min_s"] else "2026-08-01"
             end_date_str = s_dates["max_e"] if s_dates and s_dates["max_e"] else "2026-11-25"
+
+        if start_date_str < "2026-08-01":
+            start_date_str = "2026-08-01"
 
         pacing = calculate_pacing(target_count, uploaded_count, end_date_str, start_date_str)
         if target_count <= 0 and total_entries > 0:
@@ -2001,59 +2092,22 @@ def get_session_progress_analytics(session_id: Optional[str] = None, course_id: 
             })
 
         # ---------------- Course Burnup Chart ----------------
-        try:
-            start_dt = datetime.strptime(start_date_str, "%Y-%m-%d")
-            end_dt = datetime.strptime(end_date_str, "%Y-%m-%d")
-        except Exception:
-            start_dt = now - timedelta(days=60)
-            end_dt = now + timedelta(days=60)
-
-        total_days = max(1, (end_dt - start_dt).days)
-        steps = 10
-        interval_days = max(7, total_days // steps)
-
         cursor.execute(f"""
-            SELECT v.published_at
+            SELECT COALESCE(v.published_at, pv.updated_at, pv.created_at) as pub_date
             FROM planned_videos pv
-            JOIN videos v ON pv.linked_video_id = v.id
+            LEFT JOIN videos v ON pv.linked_video_id = v.id
             WHERE pv.id IN (
                 SELECT planned_video_id FROM planned_video_lists WHERE list_id IN ({placeholders})
             ) AND pv.status = 'Uploaded'
-            ORDER BY v.published_at ASC
+            ORDER BY pub_date ASC
         """, tuple(all_course_lids))
-        upload_dates = [r["published_at"][:10] for r in cursor.fetchall() if r["published_at"]]
+        upload_dates = [r["pub_date"][:10] for r in cursor.fetchall() if r["pub_date"]]
 
-        burnup_timeline = []
-        curr_t = start_dt
-        while curr_t <= end_dt:
-            date_str = curr_t.strftime("%Y-%m-%d")
-            label = curr_t.strftime("%b %d")
-            frac = min(1.0, (curr_t - start_dt).days / total_days)
-            ideal_val = round(frac * (target_count or total_entries), 1)
-
-            if curr_t <= now:
-                actual_val = sum(1 for d in upload_dates if d <= date_str)
-                if not upload_dates and uploaded_count > 0:
-                    actual_val = min(uploaded_count, round(frac * uploaded_count))
-            else:
-                actual_val = None
-
-            burnup_timeline.append({
-                "date": date_str,
-                "label": label,
-                "ideal": ideal_val,
-                "actual": actual_val
-            })
-            curr_t += timedelta(days=interval_days)
-
-        last_label = end_dt.strftime("%b %d")
-        if not burnup_timeline or burnup_timeline[-1]["label"] != last_label:
-            burnup_timeline.append({
-                "date": end_dt.strftime("%Y-%m-%d"),
-                "label": last_label,
-                "ideal": target_count or total_entries,
-                "actual": uploaded_count if end_dt <= now else None
-            })
+        burnup_chart_data = compute_burnup_data(
+            start_date_str, end_date_str,
+            target_count or total_entries, uploaded_count,
+            upload_dates, pacing, now
+        )
 
         velocity_data = get_velocity_data()
 
@@ -2122,11 +2176,7 @@ def get_session_progress_analytics(session_id: Optional[str] = None, course_id: 
             "completion_pct": pacing.get("completion_pct", 0),
             "pacing": pacing,
             "youtube_stats": youtube_stats,
-            "burnup_chart": {
-                "timeline": burnup_timeline,
-                "target": target_count or total_entries,
-                "status_color": pacing.get("color", "#3EA65E")
-            },
+            "burnup_chart": burnup_chart_data,
             "weekly_velocity": velocity_data,
             "status_distribution": {
                 "Planned": backlog_count,
@@ -2194,7 +2244,9 @@ def get_session_progress_analytics(session_id: Optional[str] = None, course_id: 
         # Find min start date & max end date of active sessions
         cursor.execute("SELECT MIN(start_date) as min_s, MAX(end_date) as max_e FROM sessions WHERE is_active = 1")
         s_dates = cursor.fetchone()
-        start_date_str = s_dates["min_s"] if s_dates and s_dates["min_s"] else "2026-07-01"
+        start_date_str = s_dates["min_s"] if s_dates and s_dates["min_s"] else "2026-08-01"
+        if start_date_str < "2026-08-01":
+            start_date_str = "2026-08-01"
         end_date_str = s_dates["max_e"] if s_dates and s_dates["max_e"] else "2026-11-25"
 
         pacing = calculate_pacing(target_count, uploaded_count, end_date_str, start_date_str)
@@ -2260,57 +2312,20 @@ def get_session_progress_analytics(session_id: Optional[str] = None, course_id: 
             })
 
         # ---------------- Global Burnup Chart Data ----------------
-        try:
-            start_dt = datetime.strptime(start_date_str, "%Y-%m-%d")
-            end_dt = datetime.strptime(end_date_str, "%Y-%m-%d")
-        except Exception:
-            start_dt = now - timedelta(days=60)
-            end_dt = now + timedelta(days=60)
-
-        total_days = max(1, (end_dt - start_dt).days)
-        steps = 10
-        interval_days = max(7, total_days // steps)
-
         cursor.execute("""
-            SELECT v.published_at
+            SELECT COALESCE(v.published_at, pv.updated_at, pv.created_at) as pub_date
             FROM planned_videos pv
-            JOIN videos v ON pv.linked_video_id = v.id
+            LEFT JOIN videos v ON pv.linked_video_id = v.id
             WHERE pv.status = 'Uploaded'
-            ORDER BY v.published_at ASC
+            ORDER BY pub_date ASC
         """)
-        upload_dates = [r["published_at"][:10] for r in cursor.fetchall() if r["published_at"]]
+        upload_dates = [r["pub_date"][:10] for r in cursor.fetchall() if r["pub_date"]]
 
-        burnup_timeline = []
-        curr_t = start_dt
-        while curr_t <= end_dt:
-            date_str = curr_t.strftime("%Y-%m-%d")
-            label = curr_t.strftime("%b %d")
-            frac = min(1.0, (curr_t - start_dt).days / total_days)
-            ideal_val = round(frac * (target_count or total_entries), 1)
-
-            if curr_t <= now:
-                actual_val = sum(1 for d in upload_dates if d <= date_str)
-                if not upload_dates and uploaded_count > 0:
-                    actual_val = min(uploaded_count, round(frac * uploaded_count))
-            else:
-                actual_val = None
-
-            burnup_timeline.append({
-                "date": date_str,
-                "label": label,
-                "ideal": ideal_val,
-                "actual": actual_val
-            })
-            curr_t += timedelta(days=interval_days)
-
-        last_label = end_dt.strftime("%b %d")
-        if not burnup_timeline or burnup_timeline[-1]["label"] != last_label:
-            burnup_timeline.append({
-                "date": end_dt.strftime("%Y-%m-%d"),
-                "label": last_label,
-                "ideal": target_count or total_entries,
-                "actual": uploaded_count if end_dt <= now else None
-            })
+        burnup_chart_data = compute_burnup_data(
+            start_date_str, end_date_str,
+            target_count or total_entries, uploaded_count,
+            upload_dates, pacing, now
+        )
 
         velocity_data = get_velocity_data()
 
@@ -2348,11 +2363,7 @@ def get_session_progress_analytics(session_id: Optional[str] = None, course_id: 
             "completion_pct": pacing.get("completion_pct", 0),
             "pacing": pacing,
             "youtube_stats": youtube_stats,
-            "burnup_chart": {
-                "timeline": burnup_timeline,
-                "target": target_count or total_entries,
-                "status_color": pacing.get("color", "#3EA65E")
-            },
+            "burnup_chart": burnup_chart_data,
             "weekly_velocity": velocity_data,
             "status_distribution": {
                 "Planned": backlog_count,
@@ -2386,7 +2397,9 @@ def get_session_progress_analytics(session_id: Optional[str] = None, course_id: 
         return {}
 
     session = dict(s_row)
-    start_date_str = session.get("start_date") or "2026-07-01"
+    start_date_str = session.get("start_date") or "2026-08-01"
+    if start_date_str < "2026-08-01":
+        start_date_str = "2026-08-01"
     end_date_str = session.get("end_date") or "2026-11-25"
 
     target_count = session.get("total_target") or 0
@@ -2427,57 +2440,20 @@ def get_session_progress_analytics(session_id: Optional[str] = None, course_id: 
         pacing["completion_pct"] = round((uploaded_count / total_entries) * 100, 1)
 
     # Burnup chart
-    try:
-        start_dt = datetime.strptime(start_date_str, "%Y-%m-%d")
-        end_dt = datetime.strptime(end_date_str, "%Y-%m-%d")
-    except Exception:
-        start_dt = now - timedelta(days=60)
-        end_dt = now + timedelta(days=60)
-
-    total_days = max(1, (end_dt - start_dt).days)
-    steps = 10
-    interval_days = max(7, total_days // steps)
-
     cursor.execute("""
-        SELECT v.published_at
+        SELECT COALESCE(v.published_at, pv.updated_at, pv.created_at) as pub_date
         FROM planned_videos pv
-        JOIN videos v ON pv.linked_video_id = v.id
+        LEFT JOIN videos v ON pv.linked_video_id = v.id
         WHERE pv.session_id = ? AND pv.status = 'Uploaded'
-        ORDER BY v.published_at ASC
+        ORDER BY pub_date ASC
     """, (session_id,))
-    upload_dates = [r["published_at"][:10] for r in cursor.fetchall() if r["published_at"]]
+    upload_dates = [r["pub_date"][:10] for r in cursor.fetchall() if r["pub_date"]]
 
-    burnup_timeline = []
-    curr_t = start_dt
-    while curr_t <= end_dt:
-        date_str = curr_t.strftime("%Y-%m-%d")
-        label = curr_t.strftime("%b %d")
-        frac = min(1.0, (curr_t - start_dt).days / total_days)
-        ideal_val = round(frac * target_count, 1)
-
-        if curr_t <= now:
-            actual_val = sum(1 for d in upload_dates if d <= date_str)
-            if not upload_dates and uploaded_count > 0:
-                actual_val = min(uploaded_count, round(frac * uploaded_count))
-        else:
-            actual_val = None
-
-        burnup_timeline.append({
-            "date": date_str,
-            "label": label,
-            "ideal": ideal_val,
-            "actual": actual_val
-        })
-        curr_t += timedelta(days=interval_days)
-
-    last_label = end_dt.strftime("%b %d")
-    if not burnup_timeline or burnup_timeline[-1]["label"] != last_label:
-        burnup_timeline.append({
-            "date": end_dt.strftime("%Y-%m-%d"),
-            "label": last_label,
-            "ideal": target_count,
-            "actual": uploaded_count if end_dt <= now else None
-        })
+    burnup_chart_data = compute_burnup_data(
+        start_date_str, end_date_str,
+        target_count, uploaded_count,
+        upload_dates, pacing, now
+    )
 
     # Grouped subjects
     cursor.execute("""
@@ -2545,11 +2521,7 @@ def get_session_progress_analytics(session_id: Optional[str] = None, course_id: 
         "completion_pct": pacing.get("completion_pct", 0),
         "pacing": pacing,
         "youtube_stats": youtube_stats,
-        "burnup_chart": {
-            "timeline": burnup_timeline,
-            "target": target_count,
-            "status_color": pacing.get("color", "#3EA65E")
-        },
+        "burnup_chart": burnup_chart_data,
         "weekly_velocity": velocity_data,
         "status_distribution": {
             "Planned": planned_backlog_count,

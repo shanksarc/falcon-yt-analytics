@@ -482,16 +482,17 @@ export default function FullVideoListView({
       {/* ------------------------------------------------------------- */}
       {/* Controls & Filter Bar                                         */}
       {/* ------------------------------------------------------------- */}
-      <div className="content-card" style={{ marginBottom: '1rem', padding: '0.85rem 1.25rem' }}>
+      <div className="content-card" style={{ marginBottom: '1rem', padding: '0.85rem 1.25rem', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '0.75rem'
+          gap: '0.75rem',
+          width: '100%'
         }}>
           {/* Format Segmented Switcher + Search Box */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flex: '1 1 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', flex: '1 1 auto', maxWidth: '100%' }}>
             {/* Segmented Format Switcher (Lectures Default!) */}
             <div style={{
               display: 'inline-flex',
@@ -574,9 +575,10 @@ export default function FullVideoListView({
               background: '#E6EAF0',
               borderRadius: '9999px',
               padding: '0.4rem 0.95rem',
-              minWidth: '220px',
-              maxWidth: '320px',
-              flex: '1 1 auto',
+              minWidth: '120px',
+              maxWidth: '100%',
+              flex: '1 1 160px',
+              boxSizing: 'border-box',
               boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.5), inset -2px -2px 4px rgba(255, 255, 255, 0.8)'
             }}>
               <Search size={14} color="var(--text-muted)" />
@@ -723,7 +725,10 @@ export default function FullVideoListView({
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '0.75rem',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+          width: '100%',
+          maxWidth: '100%',
+          boxSizing: 'border-box'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--cfa-gold)' }}>
@@ -835,8 +840,8 @@ export default function FullVideoListView({
       {/* ------------------------------------------------------------- */}
       {/* Video Table                                                   */}
       {/* ------------------------------------------------------------- */}
-      <div className="content-card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="table-responsive">
+      <div className="content-card" style={{ padding: 0, overflow: 'hidden', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+        <div className="table-responsive" style={{ width: '100%', maxWidth: '100%', minWidth: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           <table className="analytics-table" style={{ margin: 0 }}>
             <thead>
               <tr>
@@ -1244,7 +1249,9 @@ export default function FullVideoListView({
             padding: '0.75rem 1.25rem',
             borderTop: '1px solid var(--border-subtle)',
             fontSize: '0.8rem',
-            color: 'var(--text-muted)'
+            color: 'var(--text-muted)',
+            flexWrap: 'wrap',
+            gap: '0.6rem'
           }}>
             <div>
               Showing {Math.min(filteredVideos.length, (currentPage - 1) * pageSize + 1)}–{Math.min(filteredVideos.length, currentPage * pageSize)} of {filteredVideos.length} videos

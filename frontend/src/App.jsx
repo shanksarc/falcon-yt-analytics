@@ -221,7 +221,7 @@ export default function App() {
       />
 
       {/* 2. SCROLLABLE MAIN WORKSPACE CANVAS (flex-1) */}
-      <main style={{ flex: 1, height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+      <main style={{ flex: 1, height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: '100%', overflowX: 'hidden' }}>
         {/* Top Utility Header (h-16) */}
         <TopHeader
           activeTab={activeTab}

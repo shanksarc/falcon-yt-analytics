@@ -7,9 +7,9 @@ import React from 'react';
  */
 export default function SegmentedLedProgress({
   percentage = 0,
-  segmentsCount = 24,
+  segmentsCount = 18,
   variant = 'capsule', // 'capsule' | 'bar'
-  height = 14,
+  height = 12,
   color, // optional color override (defaults to theme electric blue)
   glowColor,
   trackBg,
@@ -29,11 +29,11 @@ export default function SegmentedLedProgress({
       style={{
         background: trackBg || '#E2E6ED',
         borderRadius: '10px',
-        padding: '4px 6px',
+        padding: '3px 5px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: '3px',
+        gap: '2px',
         boxShadow: 'inset 2px 2px 5px rgba(166, 175, 195, 0.45), inset -2px -2px 5px rgba(255, 255, 255, 0.85)',
         border: '1px solid rgba(166, 175, 195, 0.25)',
         width: '100%',
