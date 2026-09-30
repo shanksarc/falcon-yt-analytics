@@ -11,6 +11,7 @@ import ProgressSection from '../components/ProgressSection';
 import FullVideoListView from '../components/FullVideoListView';
 import LinkYouTubeModal from '../components/LinkYouTubeModal';
 import ErrorBoundary from '../components/ErrorBoundary';
+import { getLocalPlannedVideos, mergePlannedVideos, syncLocalVideosToServer, saveLocalPlannedVideo } from '../utils/plannerStorage';
 
 function getStatusColor(pacing) {
   if (!pacing) return '#5A5A5A';
@@ -40,6 +41,7 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
   const [allPlannedVideos, setAllPlannedVideos] = useState([]);
   const [showPlanMenu, setShowPlanMenu] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [refreshCounter, setRefreshCounter] = useState(0);
 
   // Modals
   const [showPlannedModal, setShowPlannedModal] = useState(false);
@@ -53,6 +55,16 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
 
   useEffect(() => {
     fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    const handlePlannerEvent = () => {
+      const localVideos = getLocalPlannedVideos();
+      setAllPlannedVideos(prev => mergePlannedVideos(prev, localVideos));
+      setRefreshCounter(c => c + 1);
+    };
+    window.addEventListener('falcon_planner_updated', handlePlannerEvent);
+    return () => window.removeEventListener('falcon_planner_updated', handlePlannerEvent);
   }, []);
 
   useEffect(() => {
@@ -85,7 +97,13 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
 
       setOverview(ovJson);
       setAllLists(listsJson.all_lists || []);
-      setAllPlannedVideos(allPvsJson || []);
+
+      const localVideos = getLocalPlannedVideos();
+      const mergedPvs = mergePlannedVideos(allPvsJson || [], localVideos);
+      setAllPlannedVideos(mergedPvs);
+
+      // Background sync missing to server for serverless persistence
+      syncLocalVideosToServer(allPvsJson || []);
 
       const savedSession = localStorage.getItem('falcon_planner_active_session');
       if (savedSession && ovJson.sessions?.some(s => s.id === savedSession)) {
@@ -116,6 +134,7 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
   };
 
   const refreshAll = () => {
+    setRefreshCounter(c => c + 1);
     fetchInitialData();
     if (selectedSessionId) {
       fetchSessionDetail(selectedSessionId);
@@ -494,6 +513,7 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
         <ErrorBoundary title="Progress Section Error">
           <ProgressSection
             activeSessionId={selectedSessionId}
+            refreshTrigger={refreshCounter}
             onSelectSession={handleSelectSession}
             onOpenTargetModal={() => setShowTargetModal(true)}
             onNavigateToVideos={() => setActiveViewTab('videos')}
@@ -540,14 +560,21 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
       {/* Modals */}
       {showPlannedModal && (
         <PlannedVideoModal
+          initialData={editingPlannedVideo}
           editingVideo={editingPlannedVideo}
+          availableLists={allLists}
           courses={allLists}
+          availableSessions={overview?.sessions || []}
           sessions={overview?.sessions || []}
           defaultSessionId={selectedSessionId}
+          activeSessionId={selectedSessionId}
           onClose={() => { setShowPlannedModal(false); setEditingPlannedVideo(null); }}
-          onSuccess={() => {
+          onSuccess={(savedVideo) => {
             setShowPlannedModal(false);
             setEditingPlannedVideo(null);
+            if (savedVideo) {
+              setAllPlannedVideos(prev => [savedVideo, ...prev.filter(p => p.id !== savedVideo.id)]);
+            }
             refreshAll();
           }}
         />

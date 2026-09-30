@@ -12,6 +12,7 @@ import BulkImportModal from '../components/BulkImportModal';
 import TargetManagementModal from '../components/TargetManagementModal';
 import LinkYouTubeModal from '../components/LinkYouTubeModal';
 import ErrorBoundary from '../components/ErrorBoundary';
+import { getLocalPlannedVideos, mergePlannedVideos, syncLocalVideosToServer, saveLocalPlannedVideo } from '../utils/plannerStorage';
 
 function PlannerStatusIcon({ status, color, size = 14 }) {
   if (status === 'TARGET_MET' || status === 'ON_TRACK') {
@@ -99,6 +100,15 @@ export default function ManagePlanView({ onSelectItem, selectedItem }) {
     fetchManageData();
   }, []);
 
+  useEffect(() => {
+    const handlePlannerEvent = () => {
+      const localVideos = getLocalPlannedVideos();
+      setAllPlannedVideos(prev => mergePlannedVideos(prev, localVideos));
+    };
+    window.addEventListener('falcon_planner_updated', handlePlannerEvent);
+    return () => window.removeEventListener('falcon_planner_updated', handlePlannerEvent);
+  }, []);
+
   const fetchManageData = async () => {
     setLoading(true);
     try {
@@ -120,7 +130,13 @@ export default function ManagePlanView({ onSelectItem, selectedItem }) {
       setAllLists(listsJson.all_lists || []);
       setReviewQueue(qJson);
       setStructure(structJson || { courses: [], sessions: [] });
-      setAllPlannedVideos(pvsJson || []);
+
+      const localVideos = getLocalPlannedVideos();
+      const mergedPvs = mergePlannedVideos(pvsJson || [], localVideos);
+      setAllPlannedVideos(mergedPvs);
+
+      // Background sync missing to server
+      syncLocalVideosToServer(pvsJson || []);
     } catch (err) {
       console.error('Failed to load manage data:', err);
     } finally {
@@ -1012,14 +1028,21 @@ export default function ManagePlanView({ onSelectItem, selectedItem }) {
 
       {showPlannedModal && (
         <PlannedVideoModal
+          initialData={editingPlannedVideo}
           editingVideo={editingPlannedVideo}
+          availableLists={allLists.length > 0 ? allLists : structure.courses}
           courses={structure.courses?.length > 0 ? structure.courses : allLists}
+          availableSessions={structure.sessions?.length > 0 ? structure.sessions : (overview?.sessions || [])}
           sessions={structure.sessions?.length > 0 ? structure.sessions : (overview?.sessions || [])}
+          defaultSessionId={structure.sessions?.[0]?.id || null}
           activeSessionId={structure.sessions?.[0]?.id || null}
           onClose={() => { setShowPlannedModal(false); setEditingPlannedVideo(null); }}
-          onSuccess={() => {
+          onSuccess={(savedVideo) => {
             setShowPlannedModal(false);
             setEditingPlannedVideo(null);
+            if (savedVideo) {
+              setAllPlannedVideos(prev => [savedVideo, ...prev.filter(p => p.id !== savedVideo.id)]);
+            }
             refreshAll();
           }}
         />

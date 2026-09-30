@@ -3,6 +3,7 @@ import {
   X, Zap, Layers, BookOpen, Calendar, Clock, Check, 
   AlertCircle, Sparkles, FileText, ChevronDown 
 } from 'lucide-react';
+import { saveLocalPlannedVideo } from '../utils/plannerStorage';
 
 const PRESET_SERIES = [
   "Calculator Hacks (TI BA II Plus)",
@@ -20,60 +21,166 @@ export default function PlanShortModal({
   availableLists = [],
   availableSessions = [],
   initialData = null,
-  defaultSessionId = null
+  defaultSessionId = null,
+  // Alternative prop names from callers
+  allLists: propAllLists,
+  courses: propCourses,
+  sessions: propSessions,
+  editingShort,
+  activeSessionId
 }) {
-  // Course lists
-  const courses = useMemo(() => {
-    const directCourses = availableLists.filter(l => l.is_course || ['list_cfa_l1', 'list_cfa_l2', 'list_cfa_l3', 'list_frm_p1', 'list_frm_p2'].includes(l.id));
-    if (directCourses.length > 0) return directCourses;
-    return availableLists.filter(l => !l.parent_id);
-  }, [availableLists]);
+  const resolvedInitialData = initialData || editingShort || null;
+  const resolvedDefaultSessionId = defaultSessionId || activeSessionId || null;
+
+  // Fallback fetches in case caller passed empty data
+  const [fetchedLists, setFetchedLists] = useState([]);
+  const [fetchedSessions, setFetchedSessions] = useState([]);
+
+  const inputLists = useMemo(() => {
+    if (Array.isArray(availableLists) && availableLists.length > 0) return availableLists;
+    if (Array.isArray(propAllLists) && propAllLists.length > 0) return propAllLists;
+    if (Array.isArray(propCourses) && propCourses.length > 0) return propCourses;
+    return [];
+  }, [availableLists, propAllLists, propCourses]);
+
+  const inputSessions = useMemo(() => {
+    if (Array.isArray(availableSessions) && availableSessions.length > 0) return availableSessions;
+    if (Array.isArray(propSessions) && propSessions.length > 0) return propSessions;
+    return [];
+  }, [availableSessions, propSessions]);
+
+  React.useEffect(() => {
+    if (inputLists.length === 0) {
+      fetch('/api/lists')
+        .then(r => r.json())
+        .then(data => {
+          if (data?.all_lists && Array.isArray(data.all_lists)) setFetchedLists(data.all_lists);
+        })
+        .catch(() => {});
+    }
+  }, [inputLists.length]);
+
+  React.useEffect(() => {
+    if (inputSessions.length === 0) {
+      fetch('/api/planner/overview')
+        .then(r => r.json())
+        .then(data => {
+          if (data?.sessions && Array.isArray(data.sessions)) setFetchedSessions(data.sessions);
+        })
+        .catch(() => {});
+    }
+  }, [inputSessions.length]);
+
+  const { courses, subjectsByCourse, allFlatLists } = useMemo(() => {
+    const catalog = inputLists.length > 0 ? inputLists : fetchedLists;
+    const coursesMap = new Map();
+    const subjectsMap = new Map();
+    const flatListAcc = [];
+
+    catalog.forEach(item => {
+      if (!item) return;
+
+      if (Array.isArray(item.subjects)) {
+        coursesMap.set(item.id, { id: item.id, name: item.name, is_course: 1 });
+        flatListAcc.push({ id: item.id, name: item.name, is_course: 1 });
+        const existingSubs = subjectsMap.get(item.id) || [];
+        item.subjects.forEach(sub => {
+          flatListAcc.push({ id: sub.id, name: sub.name, parent_id: item.id, is_course: 0 });
+          if (!existingSubs.some(s => s.id === sub.id)) {
+            existingSubs.push({ id: sub.id, name: sub.name, parent_id: item.id });
+          }
+        });
+        subjectsMap.set(item.id, existingSubs);
+        return;
+      }
+
+      const isKnownCourse = Boolean(
+        item.is_course || 
+        ['list_cfa_l1', 'list_cfa_l2', 'list_cfa_l3', 'list_frm_p1', 'list_frm_p2'].includes(item.id)
+      );
+
+      flatListAcc.push(item);
+
+      if (isKnownCourse) {
+        coursesMap.set(item.id, { id: item.id, name: item.name, is_course: 1 });
+      } else if (item.parent_id) {
+        const existingSubs = subjectsMap.get(item.parent_id) || [];
+        if (!existingSubs.some(s => s.id === item.id)) {
+          existingSubs.push({ id: item.id, name: item.name, parent_id: item.parent_id });
+        }
+        subjectsMap.set(item.parent_id, existingSubs);
+      }
+    });
+
+    if (coursesMap.size === 0) {
+      catalog.forEach(item => {
+        if (!item.parent_id) {
+          coursesMap.set(item.id, { id: item.id, name: item.name, is_course: 1 });
+        }
+      });
+    }
+
+    return {
+      courses: Array.from(coursesMap.values()),
+      subjectsByCourse: subjectsMap,
+      allFlatLists: flatListAcc
+    };
+  }, [inputLists, fetchedLists]);
 
   // Initial course and subject deduction
   const initialSelectedCourse = useMemo(() => {
-    if (initialData?.lists && initialData.lists.length > 0) {
-      const matchedCourse = initialData.lists.find(l => courses.some(c => c.id === l.id));
+    if (resolvedInitialData?.lists && resolvedInitialData.lists.length > 0) {
+      const matchedCourse = resolvedInitialData.lists.find(l => courses.some(c => c.id === l.id));
       if (matchedCourse) return matchedCourse.id;
-      for (const l of initialData.lists) {
-        const found = availableLists.find(item => item.id === l.id);
+      for (const l of resolvedInitialData.lists) {
+        const found = allFlatLists.find(item => item.id === l.id);
         if (found?.parent_id) return found.parent_id;
       }
     }
     return courses[0]?.id || '';
-  }, [initialData, courses, availableLists]);
+  }, [resolvedInitialData, courses, allFlatLists]);
 
   const initialSelectedSubject = useMemo(() => {
-    if (initialData?.lists && initialData.lists.length > 0) {
-      const nonCourse = initialData.lists.find(l => !courses.some(c => c.id === l.id));
+    if (resolvedInitialData?.lists && resolvedInitialData.lists.length > 0) {
+      const nonCourse = resolvedInitialData.lists.find(l => !courses.some(c => c.id === l.id));
       if (nonCourse) return nonCourse.id;
     }
     return '';
-  }, [initialData, courses]);
+  }, [resolvedInitialData, courses]);
 
-  const [title, setTitle] = useState(initialData ? initialData.title : '');
-  const [hook, setHook] = useState(initialData ? (initialData.hook || '') : '');
-  const [series, setSeries] = useState(initialData ? (initialData.series || PRESET_SERIES[0]) : PRESET_SERIES[0]);
+  const [title, setTitle] = useState(resolvedInitialData ? resolvedInitialData.title : '');
+  const [hook, setHook] = useState(resolvedInitialData ? (resolvedInitialData.hook || '') : '');
+  const [series, setSeries] = useState(resolvedInitialData ? (resolvedInitialData.series || PRESET_SERIES[0]) : PRESET_SERIES[0]);
   const [customSeries, setCustomSeries] = useState('');
   const [selectedCourse, setSelectedCourse] = useState(initialSelectedCourse);
   const [selectedSubject, setSelectedSubject] = useState(initialSelectedSubject);
-  const [sessionId, setSessionId] = useState(initialData ? (initialData.session_id || '') : (defaultSessionId || ''));
-  const [duration, setDuration] = useState(initialData ? (initialData.target_duration_sec || 60) : 60);
-  const [stage, setStage] = useState(initialData ? (initialData.production_stage || 'Idea') : 'Idea');
-  const [scriptNotes, setScriptNotes] = useState(initialData ? (initialData.notes || '') : '');
+  const [sessionId, setSessionId] = useState(resolvedInitialData ? (resolvedInitialData.session_id || '') : (resolvedDefaultSessionId || ''));
+  const [duration, setDuration] = useState(resolvedInitialData ? (resolvedInitialData.target_duration_sec || 60) : 60);
+  const [stage, setStage] = useState(resolvedInitialData ? (resolvedInitialData.production_stage || 'Idea') : 'Idea');
+  const [scriptNotes, setScriptNotes] = useState(resolvedInitialData ? (resolvedInitialData.notes || '') : '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Child subjects dependent on selected course
+  React.useEffect(() => {
+    if (!selectedCourse && courses.length > 0) {
+      setSelectedCourse(courses[0].id);
+      const subs = subjectsByCourse.get(courses[0].id) || [];
+      if (subs.length > 0 && !selectedSubject) {
+        setSelectedSubject(subs[0].id);
+      }
+    }
+  }, [courses, selectedCourse, subjectsByCourse, selectedSubject]);
+
   const childSubjects = useMemo(() => {
     if (!selectedCourse) return [];
-    return availableLists.filter(l => !l.is_course && l.parent_id === selectedCourse);
-  }, [selectedCourse, availableLists]);
+    return subjectsByCourse.get(selectedCourse) || [];
+  }, [selectedCourse, subjectsByCourse]);
 
   const handleCourseChange = (courseId) => {
     setSelectedCourse(courseId);
-    const validChildren = availableLists.filter(l => l.parent_id === courseId);
-    if (validChildren.length > 0) {
-      setSelectedSubject(validChildren[0].id);
+    const validSubs = subjectsByCourse.get(courseId) || [];
+    if (validSubs.length > 0) {
+      setSelectedSubject(validSubs[0].id);
     } else {
       setSelectedSubject('');
     }
@@ -97,28 +204,50 @@ export default function PlanShortModal({
       const finalSeries = series === 'CUSTOM' ? (customSeries.trim() || 'General Bite') : series;
       const finalStatus = stage === 'Uploaded' ? 'Uploaded' : 'Planned';
 
-      const url = initialData ? `/api/planner/videos/${initialData.id}` : '/api/planner/videos';
-      const method = initialData ? 'PUT' : 'POST';
+      const url = resolvedInitialData ? `/api/planner/videos/${resolvedInitialData.id}` : '/api/planner/videos';
+      const method = resolvedInitialData ? 'PUT' : 'POST';
+
+      const payload = {
+        title: title.trim(),
+        session_id: sessionId || null,
+        list_ids: listIds,
+        content_type: 'short',
+        hook: hook.trim(),
+        series: finalSeries,
+        target_duration_sec: parseInt(duration, 10) || 60,
+        production_stage: stage,
+        status: finalStatus,
+        notes: scriptNotes.trim()
+      };
 
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          session_id: sessionId || null,
-          list_ids: listIds,
-          content_type: 'short',
-          hook: hook.trim(),
-          series: finalSeries,
-          target_duration_sec: parseInt(duration, 10) || 60,
-          production_stage: stage,
-          status: finalStatus,
-          notes: scriptNotes.trim()
-        })
+        body: JSON.stringify(payload)
       });
 
-      if (!res.ok) throw new Error("Failed to save Short plan.");
-      onSuccess();
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || "Failed to save Short plan.");
+      }
+
+      const resData = await res.json().catch(() => ({}));
+      const savedShort = {
+        id: resData?.video?.id || resData?.id || resolvedInitialData?.id || `ps_${Date.now()}`,
+        ...payload,
+        lists: listIds.map(lid => {
+          const found = allFlatLists.find(item => item.id === lid);
+          return found ? { id: found.id, name: found.name, is_course: found.is_course, parent_id: found.parent_id } : { id: lid, name: lid };
+        }),
+        created_at: resolvedInitialData?.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Also persist to localStorage for serverless durability
+      saveLocalPlannedVideo(savedShort);
+
+      if (onSuccess) onSuccess(savedShort);
+      onClose();
     } catch (err) {
       setError(err.message || "Failed to save Short.");
     } finally {

@@ -27,6 +27,7 @@ import {
   CalendarDays
 } from 'lucide-react';
 import { getVideoTrackInfo } from './FullVideoListView';
+import { getLocalPlannedVideos, mergePlannedVideos } from '../utils/plannerStorage';
 
 function formatCompactNum(num) {
   if (!num || isNaN(num)) return '0';
@@ -68,6 +69,16 @@ export default function RightSidebarDock({
     fetchPlannedVideos();
   }, [status?.last_youtube_sync, selectedItem?.status, selectedItem?.is_urgent]);
 
+  useEffect(() => {
+    const handlePlannerEvent = () => {
+      const localVideos = getLocalPlannedVideos();
+      setPlannedVideos(prev => mergePlannedVideos(prev, localVideos));
+      fetchYouTubeImpact();
+    };
+    window.addEventListener('falcon_planner_updated', handlePlannerEvent);
+    return () => window.removeEventListener('falcon_planner_updated', handlePlannerEvent);
+  }, []);
+
   const fetchYouTubeImpact = async () => {
     try {
       const res = await fetch('/api/planner/progress-analytics');
@@ -90,12 +101,14 @@ export default function RightSidebarDock({
       const res = await fetch('/api/planner/videos?status=ALL');
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data)) {
-          setPlannedVideos(data);
-        }
+        const serverList = Array.isArray(data) ? data : [];
+        const localList = getLocalPlannedVideos();
+        setPlannedVideos(mergePlannedVideos(serverList, localList));
       }
     } catch (err) {
       console.debug('Failed to fetch planned videos for right dock:', err);
+      const localList = getLocalPlannedVideos();
+      if (localList.length > 0) setPlannedVideos(localList);
     }
   };
 

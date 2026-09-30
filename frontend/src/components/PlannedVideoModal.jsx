@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { X, BookOpen, Layers, Calendar, Check, AlertCircle } from 'lucide-react';
+import { saveLocalPlannedVideo } from '../utils/plannerStorage';
 
 export default function PlannedVideoModal({ 
   onClose, 
@@ -8,69 +9,194 @@ export default function PlannedVideoModal({
   availableSessions = [], 
   initialData = null,
   defaultSessionId = null,
-  defaultListId = null
+  defaultListId = null,
+  // Alternative prop names used across the codebase
+  courses: propCourses,
+  sessions: propSessions,
+  editingVideo,
+  activeSessionId,
+  allLists: propAllLists
 }) {
-  // Extract course lists (top level / is_course = 1)
-  const courses = useMemo(() => {
-    const directCourses = availableLists.filter(l => l.is_course || ['list_cfa_l1', 'list_cfa_l2', 'list_cfa_l3', 'list_frm_p1', 'list_frm_p2'].includes(l.id));
-    if (directCourses.length > 0) return directCourses;
-    return availableLists.filter(l => !l.parent_id);
-  }, [availableLists]);
+  // Normalize initial editing item
+  const resolvedInitialData = initialData || editingVideo || null;
+  const resolvedDefaultSessionId = defaultSessionId || activeSessionId || null;
 
-  // Determine initial course & subject if initialData or defaultListId provided
+  // Fallback fetches in case caller passed empty or loading data
+  const [fetchedLists, setFetchedLists] = useState([]);
+  const [fetchedSessions, setFetchedSessions] = useState([]);
+
+  // Resolve raw lists input from any supplied prop
+  const inputLists = useMemo(() => {
+    if (Array.isArray(availableLists) && availableLists.length > 0) return availableLists;
+    if (Array.isArray(propCourses) && propCourses.length > 0) return propCourses;
+    if (Array.isArray(propAllLists) && propAllLists.length > 0) return propAllLists;
+    return [];
+  }, [availableLists, propCourses, propAllLists]);
+
+  // Resolve raw sessions input from any supplied prop
+  const inputSessions = useMemo(() => {
+    if (Array.isArray(availableSessions) && availableSessions.length > 0) return availableSessions;
+    if (Array.isArray(propSessions) && propSessions.length > 0) return propSessions;
+    return [];
+  }, [availableSessions, propSessions]);
+
+  // Fallback fetch if lists are empty
+  useEffect(() => {
+    if (inputLists.length === 0) {
+      fetch('/api/lists')
+        .then(r => r.json())
+        .then(data => {
+          if (data?.all_lists && Array.isArray(data.all_lists)) {
+            setFetchedLists(data.all_lists);
+          }
+        })
+        .catch(err => console.debug('Notice fetching fallback lists:', err));
+    }
+  }, [inputLists.length]);
+
+  // Fallback fetch if sessions are empty
+  useEffect(() => {
+    if (inputSessions.length === 0) {
+      fetch('/api/planner/overview')
+        .then(r => r.json())
+        .then(data => {
+          if (data?.sessions && Array.isArray(data.sessions)) {
+            setFetchedSessions(data.sessions);
+          }
+        })
+        .catch(err => console.debug('Notice fetching fallback sessions:', err));
+    }
+  }, [inputSessions.length]);
+
+  const resolvedSessions = inputSessions.length > 0 ? inputSessions : fetchedSessions;
+
+  // Unified list processing: handles both flat catalogs (with parent_id) and nested catalogs (with .subjects)
+  const { courses, subjectsByCourse, allFlatLists } = useMemo(() => {
+    const catalog = inputLists.length > 0 ? inputLists : fetchedLists;
+    const coursesMap = new Map();
+    const subjectsMap = new Map();
+    const flatListAcc = [];
+
+    catalog.forEach(item => {
+      if (!item) return;
+
+      // Case A: Item is a nested Course object (from /api/planner/structure)
+      if (Array.isArray(item.subjects)) {
+        coursesMap.set(item.id, { id: item.id, name: item.name, is_course: 1 });
+        flatListAcc.push({ id: item.id, name: item.name, is_course: 1 });
+
+        const existingSubs = subjectsMap.get(item.id) || [];
+        item.subjects.forEach(sub => {
+          flatListAcc.push({ id: sub.id, name: sub.name, parent_id: item.id, is_course: 0 });
+          if (!existingSubs.some(s => s.id === sub.id)) {
+            existingSubs.push({ id: sub.id, name: sub.name, parent_id: item.id });
+          }
+        });
+        subjectsMap.set(item.id, existingSubs);
+        return;
+      }
+
+      // Case B: Flat item (from /api/lists all_lists)
+      const isKnownCourse = Boolean(
+        item.is_course || 
+        ['list_cfa_l1', 'list_cfa_l2', 'list_cfa_l3', 'list_frm_p1', 'list_frm_p2'].includes(item.id)
+      );
+
+      flatListAcc.push(item);
+
+      if (isKnownCourse) {
+        coursesMap.set(item.id, { id: item.id, name: item.name, is_course: 1 });
+      } else if (item.parent_id) {
+        const existingSubs = subjectsMap.get(item.parent_id) || [];
+        if (!existingSubs.some(s => s.id === item.id)) {
+          existingSubs.push({ id: item.id, name: item.name, parent_id: item.parent_id });
+        }
+        subjectsMap.set(item.parent_id, existingSubs);
+      }
+    });
+
+    // Fallback: If no explicit is_course flags were matched, pick items with parent_id === null or empty
+    if (coursesMap.size === 0) {
+      catalog.forEach(item => {
+        if (!item.parent_id) {
+          coursesMap.set(item.id, { id: item.id, name: item.name, is_course: 1 });
+        }
+      });
+    }
+
+    return {
+      courses: Array.from(coursesMap.values()),
+      subjectsByCourse: subjectsMap,
+      allFlatLists: flatListAcc
+    };
+  }, [inputLists, fetchedLists]);
+
+  // Determine initial selected course and subject
   const initialSelectedCourse = useMemo(() => {
-    if (initialData?.lists && initialData.lists.length > 0) {
-      const matchedCourse = initialData.lists.find(l => courses.some(c => c.id === l.id));
-      if (matchedCourse) return matchedCourse.id;
-      // Or find parent of any list
-      for (const l of initialData.lists) {
-        const found = availableLists.find(item => item.id === l.id);
+    if (resolvedInitialData?.lists && resolvedInitialData.lists.length > 0) {
+      const matched = resolvedInitialData.lists.find(l => courses.some(c => c.id === l.id));
+      if (matched) return matched.id;
+      for (const l of resolvedInitialData.lists) {
+        const found = allFlatLists.find(item => item.id === l.id);
         if (found?.parent_id) return found.parent_id;
       }
     }
     if (defaultListId) {
-      const found = availableLists.find(l => l.id === defaultListId);
+      const found = allFlatLists.find(l => l.id === defaultListId);
       if (found?.is_course) return found.id;
       if (found?.parent_id) return found.parent_id;
     }
     return courses[0]?.id || '';
-  }, [initialData, defaultListId, courses, availableLists]);
+  }, [resolvedInitialData, defaultListId, courses, allFlatLists]);
 
   const initialSelectedSubject = useMemo(() => {
-    if (initialData?.lists && initialData.lists.length > 0) {
-      const nonCourse = initialData.lists.find(l => !courses.some(c => c.id === l.id));
+    if (resolvedInitialData?.lists && resolvedInitialData.lists.length > 0) {
+      const nonCourse = resolvedInitialData.lists.find(l => !courses.some(c => c.id === l.id));
       if (nonCourse) return nonCourse.id;
     }
     if (defaultListId) {
-      const found = availableLists.find(l => l.id === defaultListId);
+      const found = allFlatLists.find(l => l.id === defaultListId);
       if (found && !found.is_course) return found.id;
     }
     return '';
-  }, [initialData, defaultListId, courses, availableLists]);
+  }, [resolvedInitialData, defaultListId, courses, allFlatLists]);
 
   const [selectedCourse, setSelectedCourse] = useState(initialSelectedCourse);
   const [selectedSubject, setSelectedSubject] = useState(initialSelectedSubject);
-  const [title, setTitle] = useState(initialData ? initialData.title : '');
-  const [sessionId, setSessionId] = useState(initialData ? (initialData.session_id || '') : (defaultSessionId || ''));
-  const [status, setStatus] = useState(initialData ? initialData.status : 'Planned');
-  const [assignedMonth, setAssignedMonth] = useState(initialData ? (initialData.assigned_month || '') : '');
-  const [assignedWeek, setAssignedWeek] = useState(initialData ? (initialData.assigned_week || '') : '');
-  const [notes, setNotes] = useState(initialData ? (initialData.notes || '') : '');
+  const [title, setTitle] = useState(resolvedInitialData ? resolvedInitialData.title : '');
+  const [sessionId, setSessionId] = useState(
+    resolvedInitialData ? (resolvedInitialData.session_id || '') : (resolvedDefaultSessionId || '')
+  );
+  const [status, setStatus] = useState(resolvedInitialData ? resolvedInitialData.status : 'Planned');
+  const [assignedMonth, setAssignedMonth] = useState(resolvedInitialData ? (resolvedInitialData.assigned_month || '') : '');
+  const [assignedWeek, setAssignedWeek] = useState(resolvedInitialData ? (resolvedInitialData.assigned_week || '') : '');
+  const [notes, setNotes] = useState(resolvedInitialData ? (resolvedInitialData.notes || '') : '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Child lists dependent on selected course
+  // Keep selectedCourse synced when courses finish loading asynchronously
+  useEffect(() => {
+    if (!selectedCourse && courses.length > 0) {
+      setSelectedCourse(courses[0].id);
+      const subs = subjectsByCourse.get(courses[0].id) || [];
+      if (subs.length > 0 && !selectedSubject) {
+        setSelectedSubject(subs[0].id);
+      }
+    }
+  }, [courses, selectedCourse, subjectsByCourse, selectedSubject]);
+
+  // Derived child subjects for the currently chosen course
   const childSubjects = useMemo(() => {
     if (!selectedCourse) return [];
-    return availableLists.filter(l => !l.is_course && l.parent_id === selectedCourse);
-  }, [selectedCourse, availableLists]);
+    return subjectsByCourse.get(selectedCourse) || [];
+  }, [selectedCourse, subjectsByCourse]);
 
-  // If selected subject is not in childSubjects, reset or pick first
+  // When changing course, select the first subject if available
   const handleCourseChange = (courseId) => {
     setSelectedCourse(courseId);
-    const validChildren = availableLists.filter(l => l.parent_id === courseId);
-    if (validChildren.length > 0) {
-      setSelectedSubject(validChildren[0].id);
+    const validSubs = subjectsByCourse.get(courseId) || [];
+    if (validSubs.length > 0) {
+      setSelectedSubject(validSubs[0].id);
     } else {
       setSelectedSubject('');
     }
@@ -90,25 +216,60 @@ export default function PlannedVideoModal({
       if (selectedCourse) listIds.push(selectedCourse);
       if (selectedSubject && !listIds.includes(selectedSubject)) listIds.push(selectedSubject);
 
-      const url = initialData ? `/api/planner/videos/${initialData.id}` : '/api/planner/videos';
-      const method = initialData ? 'PUT' : 'POST';
+      const url = resolvedInitialData ? `/api/planner/videos/${resolvedInitialData.id}` : '/api/planner/videos';
+      const method = resolvedInitialData ? 'PUT' : 'POST';
+
+      const payload = {
+        title: title.trim(),
+        session_id: sessionId || null,
+        list_ids: listIds,
+        status,
+        assigned_month: assignedMonth || null,
+        assigned_week: assignedWeek || null,
+        notes: notes.trim(),
+        content_type: 'video'
+      };
 
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          session_id: sessionId || null,
-          list_ids: listIds,
-          status,
-          assigned_month: assignedMonth || null,
-          assigned_week: assignedWeek || null,
-          notes: notes.trim()
-        })
+        body: JSON.stringify(payload)
       });
 
-      if (!res.ok) throw new Error("Failed to save planned video entry");
-      onSuccess();
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || "Failed to save planned video entry");
+      }
+
+      const resData = await res.json().catch(() => ({}));
+      const resolvedSessionObj = resolvedSessions.find(s => s.id === sessionId);
+
+      // Build complete video entity for immediate UI responsiveness & client-side persistence
+      const savedVideo = {
+        id: resData?.video?.id || resData?.id || resolvedInitialData?.id || `pv_${Date.now()}`,
+        title: title.trim(),
+        session_id: sessionId || null,
+        session_name: resolvedSessionObj?.name || (sessionId ? sessionId : 'Evergreen'),
+        status: status || 'Planned',
+        assigned_month: assignedMonth || null,
+        assigned_week: assignedWeek || null,
+        notes: notes.trim(),
+        content_type: 'video',
+        lists: listIds.map(lid => {
+          const found = allFlatLists.find(item => item.id === lid);
+          return found ? { id: found.id, name: found.name, is_course: found.is_course, parent_id: found.parent_id } : { id: lid, name: lid };
+        }),
+        created_at: resolvedInitialData?.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Persist locally so it instantly survives Vercel serverless cold starts & multi-container switches
+      saveLocalPlannedVideo(savedVideo);
+
+      if (onSuccess) {
+        onSuccess(savedVideo);
+      }
+      onClose();
     } catch (err) {
       setError(err.message || "Failed to save planned video.");
     } finally {
@@ -129,7 +290,7 @@ export default function PlannedVideoModal({
             </div>
             <div>
               <h3 className="modal-title" style={{ fontSize: '1.05rem' }}>
-                {initialData ? 'Edit Planned Video' : 'Individual Entry Form'}
+                {resolvedInitialData ? 'Edit Planned Video' : 'Individual Entry Form'}
               </h3>
               <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
                 Specify course, subject, title, and exam session.
@@ -163,7 +324,9 @@ export default function PlannedVideoModal({
                 onChange={(e) => handleCourseChange(e.target.value)}
                 required
               >
-                <option value="" disabled>Select course...</option>
+                {courses.length === 0 && (
+                  <option value="" disabled>Loading courses...</option>
+                )}
                 {courses.map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
@@ -209,7 +372,7 @@ export default function PlannedVideoModal({
                 onChange={(e) => setSessionId(e.target.value)}
               >
                 <option value="">Not Applicable (Evergreen / Someday)</option>
-                {(Array.isArray(availableSessions) ? availableSessions : []).map(s => (
+                {resolvedSessions.map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
@@ -277,7 +440,7 @@ export default function PlannedVideoModal({
               Cancel
             </button>
             <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'Saving...' : (initialData ? 'Save changes' : 'Create Planned Entry')}
+              {saving ? 'Saving...' : (resolvedInitialData ? 'Save changes' : 'Create Planned Entry')}
             </button>
           </div>
         </form>

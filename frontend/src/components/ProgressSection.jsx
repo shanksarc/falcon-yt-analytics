@@ -7,6 +7,7 @@ import {
   Table as TableIcon, LayoutGrid, ArrowUpDown, X
 } from 'lucide-react';
 import TargetManagementModal from './TargetManagementModal';
+import { getLocalPlannedVideos } from '../utils/plannerStorage';
 
 function StatusIcon({ status, color, size = 13 }) {
   if (status === 'TARGET_MET' || status === 'ON_TRACK') {
@@ -210,12 +211,23 @@ function formatCourseShortName(name) {
     .replace(/FRM\s*Part\s*2/i, 'FRM P2');
 }
 
-export default function ProgressSection({ initialSessionId = null, onNavigateToVideos }) {
+export default function ProgressSection({ 
+  initialSessionId = null, 
+  activeSessionId: propActiveSessionId, 
+  onNavigateToVideos,
+  refreshTrigger = 0
+}) {
   // Navigation & Scope State:
   // activeCourseId: null = Global (Full Plan), string = Course Drill-Down
   // activeSessionId: null = All Sessions, string = Filtered by Session
   const [activeCourseId, setActiveCourseId] = useState(null);
-  const [activeSessionId, setActiveSessionId] = useState(initialSessionId);
+  const [activeSessionId, setActiveSessionId] = useState(propActiveSessionId || initialSessionId);
+
+  useEffect(() => {
+    if (propActiveSessionId !== undefined && propActiveSessionId !== activeSessionId) {
+      setActiveSessionId(propActiveSessionId);
+    }
+  }, [propActiveSessionId]);
 
   // In course mode, toggle between Subjects and Sessions cards
   const [courseBreakdownTab, setCourseBreakdownTab] = useState('subjects'); // 'subjects' | 'sessions'
@@ -246,6 +258,14 @@ export default function ProgressSection({ initialSessionId = null, onNavigateToV
 
   useEffect(() => {
     fetchAnalytics(activeCourseId, activeSessionId);
+  }, [activeCourseId, activeSessionId, refreshTrigger]);
+
+  useEffect(() => {
+    const handlePlannerEvent = () => {
+      fetchAnalytics(activeCourseId, activeSessionId);
+    };
+    window.addEventListener('falcon_planner_updated', handlePlannerEvent);
+    return () => window.removeEventListener('falcon_planner_updated', handlePlannerEvent);
   }, [activeCourseId, activeSessionId]);
 
   const fetchAnalytics = async (courseId, sessId) => {
@@ -259,6 +279,56 @@ export default function ProgressSection({ initialSessionId = null, onNavigateToV
       const res = await fetch(url);
       if (res.ok) {
         const json = await res.json();
+        
+        // Overlay client-side custom planned videos in case serverless backend cold-started
+        try {
+          const localVideos = getLocalPlannedVideos();
+
+          if (localVideos.length > 0 && json) {
+            // Count matching local videos
+            const matchingLocal = localVideos.filter(pv => {
+              if (pv.status === 'Uploaded') return false;
+              if (sessId && sessId !== 'ALL' && pv.session_id && pv.session_id !== sessId) return false;
+              if (courseId) {
+                return (pv.lists || []).some(l => (l.id || l) === courseId || (l.parent_id || '') === courseId);
+              }
+              return true;
+            });
+
+            // If we have local videos, ensure course_breakdown or subject_breakdown counts reflect them
+            if (json.course_breakdown && Array.isArray(json.course_breakdown)) {
+              json.course_breakdown = json.course_breakdown.map(cb => {
+                const cLocal = localVideos.filter(pv => 
+                  pv.status !== 'Uploaded' && (pv.lists || []).some(l => (l.id || l) === cb.id || (l.parent_id || '') === cb.id)
+                );
+                const extraPlanned = Math.max(0, cLocal.length - (cb.planned || 0));
+                return {
+                  ...cb,
+                  planned: Math.max(cb.planned || 0, cLocal.length)
+                };
+              });
+            }
+
+            if (json.subject_breakdown && Array.isArray(json.subject_breakdown)) {
+              json.subject_breakdown = json.subject_breakdown.map(sb => {
+                const sLocal = localVideos.filter(pv =>
+                  pv.status !== 'Uploaded' && (pv.lists || []).some(l => (l.id || l) === sb.id)
+                );
+                return {
+                  ...sb,
+                  planned: Math.max(sb.planned || 0, sLocal.length)
+                };
+              });
+            }
+
+            if (matchingLocal.length > (json.planned || 0)) {
+              json.planned = matchingLocal.length;
+            }
+          }
+        } catch (overlayErr) {
+          console.debug('Notice overlaying local planned stats:', overlayErr);
+        }
+
         setAnalytics(json);
       }
     } catch (err) {

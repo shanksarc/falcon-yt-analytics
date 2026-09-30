@@ -1371,10 +1371,100 @@ def create_planned_video(pv: PlannedVideoCreate):
     conn.commit()
     conn.close()
 
-    # Automatically check if matches any published video
-    run_auto_matching()
+    # Automatically check if matches any published video (fail-safe)
+    try:
+        run_auto_matching()
+    except Exception as _match_err:
+        print(f"Notice running auto-matching after planned video create: {_match_err}")
 
-    return {"status": "success", "id": pv_id}
+    return {
+        "status": "success", 
+        "id": pv_id,
+        "video": {
+            "id": pv_id,
+            "title": pv.title,
+            "session_id": pv.session_id,
+            "status": pv.status or "Planned",
+            "assigned_month": assigned_month,
+            "assigned_week": pv.assigned_week,
+            "notes": pv.notes or "",
+            "content_type": pv.content_type or "video",
+            "hook": pv.hook or "",
+            "series": pv.series or "",
+            "target_duration_sec": pv.target_duration_sec or 60,
+            "production_stage": pv.production_stage or "Idea",
+            "is_urgent": pv.is_urgent or 0,
+            "list_ids": pv.list_ids or [],
+            "created_at": now_str,
+            "updated_at": now_str
+        }
+    }
+
+@app.post("/api/planner/sync-client")
+def sync_client_planned_videos(payload: Dict[str, Any]):
+    """
+    Syncs client-side planned videos into the current server database container.
+    Essential for Vercel Serverless cold-starts where /tmp starts fresh.
+    """
+    videos = payload.get("videos") or []
+    if not videos:
+        return {"status": "success", "synced": 0}
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    synced_count = 0
+
+    for v in videos:
+        vid = v.get("id")
+        if not vid or not v.get("title"):
+            continue
+        cursor.execute("SELECT id FROM planned_videos WHERE id = ?", (vid,))
+        if cursor.fetchone():
+            continue
+
+        assigned_m = v.get("assigned_month") or derive_month_from_week(v.get("assigned_week"))
+        now_str = v.get("created_at") or datetime.now().isoformat()
+        cursor.execute("""
+            INSERT OR IGNORE INTO planned_videos (id, title, session_id, status, assigned_month, assigned_week, notes, content_type, hook, series, target_duration_sec, production_stage, is_urgent, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            vid,
+            v.get("title"),
+            v.get("session_id"),
+            v.get("status") or "Planned",
+            assigned_m,
+            v.get("assigned_week"),
+            v.get("notes") or "",
+            v.get("content_type") or "video",
+            v.get("hook") or "",
+            v.get("series") or "",
+            v.get("target_duration_sec") or 60,
+            v.get("production_stage") or "Idea",
+            1 if v.get("is_urgent") else 0,
+            now_str,
+            v.get("updated_at") or now_str
+        ))
+
+        raw_lists = v.get("lists") or v.get("list_ids") or []
+        for l in raw_lists:
+            lid = l.get("id") if isinstance(l, dict) else l
+            if lid:
+                cursor.execute("""
+                    INSERT OR IGNORE INTO planned_video_lists (planned_video_id, list_id)
+                    VALUES (?, ?)
+                """, (vid, lid))
+
+        synced_count += 1
+
+    conn.commit()
+    conn.close()
+
+    try:
+        run_auto_matching()
+    except Exception as _match_err:
+        pass
+
+    return {"status": "success", "synced": synced_count}
 
 @app.post("/api/planner/validate-entries")
 def validate_entries_endpoint(entries: List[RawPlannerEntry]):
