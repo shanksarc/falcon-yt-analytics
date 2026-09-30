@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, BookOpen, Layers, Calendar, Check, AlertCircle } from 'lucide-react';
-import { saveLocalPlannedVideo } from '../utils/plannerStorage';
+import { X, BookOpen, Layers, Calendar, Check, AlertCircle, Trash2 } from 'lucide-react';
+import { saveLocalPlannedVideo, removeLocalPlannedVideo } from '../utils/plannerStorage';
 
 export default function PlannedVideoModal({ 
   onClose, 
@@ -172,6 +172,7 @@ export default function PlannedVideoModal({
   const [assignedWeek, setAssignedWeek] = useState(resolvedInitialData ? (resolvedInitialData.assigned_week || '') : '');
   const [notes, setNotes] = useState(resolvedInitialData ? (resolvedInitialData.notes || '') : '');
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
 
   // Keep selectedCourse synced when courses finish loading asynchronously
@@ -274,6 +275,33 @@ export default function PlannedVideoModal({
       setError(err.message || "Failed to save planned video.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!resolvedInitialData?.id) return;
+    const itemTitle = title ? `"${title}"` : 'this planned video';
+    if (!window.confirm(`Are you sure you want to delete ${itemTitle}? This action cannot be undone.`)) return;
+
+    setDeleting(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/planner/videos/${resolvedInitialData.id}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) {
+        throw new Error('Failed to delete planned video');
+      }
+      removeLocalPlannedVideo(resolvedInitialData.id);
+      if (onSuccess) {
+        onSuccess({ id: resolvedInitialData.id, deleted: true });
+      }
+      onClose();
+    } catch (err) {
+      console.error('Delete error:', err);
+      setError(err.message || 'Failed to delete planned video.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -435,13 +463,40 @@ export default function PlannedVideoModal({
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-            <button type="button" className="btn-ghost" onClick={onClose} disabled={saving}>
-              Cancel
-            </button>
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'Saving...' : (resolvedInitialData ? 'Save changes' : 'Create Planned Entry')}
-            </button>
+          <div style={{ display: 'flex', justifyContent: resolvedInitialData ? 'space-between' : 'flex-end', alignItems: 'center', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+            {resolvedInitialData && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={saving || deleting}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 14px',
+                  borderRadius: '9999px',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#EF4444',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: (saving || deleting) ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Trash2 size={14} />
+                <span>{deleting ? 'Deleting...' : 'Delete Video'}</span>
+              </button>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <button type="button" className="btn-ghost" onClick={onClose} disabled={saving || deleting}>
+                Cancel
+              </button>
+              <button type="submit" className="btn-primary" disabled={saving || deleting}>
+                {saving ? 'Saving...' : (resolvedInitialData ? 'Save changes' : 'Create Planned Entry')}
+              </button>
+            </div>
           </div>
         </form>
       </div>

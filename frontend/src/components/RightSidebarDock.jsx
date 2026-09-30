@@ -24,10 +24,11 @@ import {
   Users2,
   AlertCircle,
   LayoutDashboard,
-  CalendarDays
+  CalendarDays,
+  Trash2
 } from 'lucide-react';
 import { getVideoTrackInfo } from './FullVideoListView';
-import { getLocalPlannedVideos, mergePlannedVideos } from '../utils/plannerStorage';
+import { getLocalPlannedVideos, mergePlannedVideos, removeLocalPlannedVideo } from '../utils/plannerStorage';
 
 function formatCompactNum(num) {
   if (!num || isNaN(num)) return '0';
@@ -47,6 +48,7 @@ export default function RightSidebarDock({
   onUpdateItemStatus,
   onSelectItem,
   onOpenLinkModal,
+  onDeleteItem,
   isOpen = false,
   onClose
 }) {
@@ -54,6 +56,7 @@ export default function RightSidebarDock({
   const [uploadedCount, setUploadedCount] = useState(0);
   const [plannedVideos, setPlannedVideos] = useState([]);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isDeletingItem, setIsDeletingItem] = useState(false);
   const [localStatus, setLocalStatus] = useState(null);
 
   // Sync local status when selectedItem changes
@@ -163,6 +166,33 @@ export default function RightSidebarDock({
       console.error('Failed to update status from inspector:', err);
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleDeleteItem = async () => {
+    if (!selectedItem || !selectedItem.id || isDeletingItem) return;
+    const title = selectedItem.title || selectedItem.name || 'this planned video';
+    if (!window.confirm(`Are you sure you want to permanently delete "${title}"?`)) return;
+    setIsDeletingItem(true);
+    try {
+      if (onDeleteItem) {
+        await onDeleteItem(selectedItem);
+      } else {
+        const res = await fetch(`/api/planner/videos/${selectedItem.id}`, { method: 'DELETE' });
+        if (res.ok) {
+          removeLocalPlannedVideo(selectedItem.id);
+          if (onClearSelectedItem) onClearSelectedItem();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert(`Failed to delete: ${err.detail || 'Server error'}`);
+        }
+      }
+      fetchPlannedVideos();
+    } catch (err) {
+      console.error('Delete item error:', err);
+      alert('Failed to delete planned video: ' + err.message);
+    } finally {
+      setIsDeletingItem(false);
     }
   };
 
@@ -1022,6 +1052,35 @@ export default function RightSidebarDock({
               >
                 <Link2 size={12} />
                 <span>Link to YouTube Video</span>
+              </button>
+            )}
+
+            {/* Delete Option for Planned Video in Inspector */}
+            {selectedItem.id && (
+              <button
+                type="button"
+                onClick={handleDeleteItem}
+                disabled={isDeletingItem}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: '#EF4444',
+                  padding: '7px 10px',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(239, 68, 68, 0.2)',
+                  cursor: isDeletingItem ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.15s ease',
+                  marginTop: '4px'
+                }}
+                title="Permanently delete this planned video"
+              >
+                <Trash2 size={12} />
+                <span>{isDeletingItem ? 'Deleting...' : 'Delete Planned Video'}</span>
               </button>
             )}
           </div>

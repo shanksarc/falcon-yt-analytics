@@ -5,6 +5,7 @@ import {
   UploadCloud, ArrowUpDown, Layers, Zap, Clock, AlertCircle, RefreshCw,
   Video, CheckCircle2, TrendingUp, BarChart2, Flame
 } from 'lucide-react';
+import { removeLocalPlannedVideo } from '../utils/plannerStorage';
 
 // Subject Abbreviations Dictionary (Fix 2: CFA & FRM Short Form Standard)
 const SUBJECT_ABBR_MAP = {
@@ -430,16 +431,18 @@ export default function FullVideoListView({
     if (!window.confirm(`Are you sure you want to permanently delete these ${selectedIds.size} planned videos?`)) return;
     setBulkUpdating(true);
     try {
+      const idsToDelete = Array.from(selectedIds);
       const res = await fetch('/api/planner/videos/bulk-delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          video_ids: Array.from(selectedIds)
+          video_ids: idsToDelete
         })
       });
 
       if (res.ok) {
-        setBulkActionMsg(`Successfully deleted ${selectedIds.size} planned videos.`);
+        idsToDelete.forEach(id => removeLocalPlannedVideo(id));
+        setBulkActionMsg(`Successfully deleted ${idsToDelete.length} planned videos.`);
         setTimeout(() => setBulkActionMsg(null), 3500);
         setSelectedIds(new Set());
         if (onRefresh) onRefresh();
@@ -449,6 +452,33 @@ export default function FullVideoListView({
       alert("Failed to delete videos in bulk: " + err.message);
     } finally {
       setBulkUpdating(false);
+    }
+  };
+
+  const handleDeleteSingle = async (pv) => {
+    const videoTitle = pv.title || 'this planned video';
+    if (!window.confirm(`Are you sure you want to permanently delete "${videoTitle}"?`)) return;
+    try {
+      const res = await fetch(`/api/planner/videos/${pv.id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        removeLocalPlannedVideo(pv.id);
+        setBulkActionMsg(`Successfully deleted "${videoTitle}".`);
+        setTimeout(() => setBulkActionMsg(null), 3500);
+        if (selectedIds.has(pv.id)) {
+          const next = new Set(selectedIds);
+          next.delete(pv.id);
+          setSelectedIds(next);
+        }
+        if (onRefresh) onRefresh();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(`Failed to delete planned video: ${err.detail || 'Server error'}`);
+      }
+    } catch (err) {
+      console.error("Delete single video error:", err);
+      alert("Failed to delete planned video: " + err.message);
     }
   };
 
@@ -1229,6 +1259,15 @@ export default function FullVideoListView({
                             title="Edit planned video"
                           >
                             <Edit3 size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-ghost"
+                            onClick={() => handleDeleteSingle(pv)}
+                            style={{ padding: '0.2rem', color: '#EF4444' }}
+                            title="Delete planned video"
+                          >
+                            <Trash2 size={13} />
                           </button>
                         </div>
                       </td>

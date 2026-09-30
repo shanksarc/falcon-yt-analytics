@@ -21,6 +21,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import AdminAuthGate from './components/AdminAuthGate';
 import RightSidebarDock from './components/RightSidebarDock';
 import MobileBottomNav from './components/MobileBottomNav';
+import { removeLocalPlannedVideo } from './utils/plannerStorage';
 
 import { LayoutDashboard, BarChart3, AlertTriangle, History, Users, Calendar, CheckCircle2 } from 'lucide-react';
 
@@ -188,6 +189,26 @@ export default function App() {
       setRefreshKey(prev => prev + 1);
     } catch (err) {
       console.error("Failed to update status from inspector:", err);
+    }
+  };
+
+  const handleDeleteInspectorItem = async (item) => {
+    if (!item || !item.id) return;
+    try {
+      const res = await fetch(`/api/planner/videos/${item.id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        removeLocalPlannedVideo(item.id);
+        setSelectedInspectorItem(null);
+        setRefreshKey(prev => prev + 1);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(`Failed to delete: ${err.detail || 'Server error'}`);
+      }
+    } catch (err) {
+      console.error("Failed to delete inspector item:", err);
+      alert("Failed to delete item: " + err.message);
     }
   };
 
@@ -359,6 +380,7 @@ export default function App() {
         onClearSelectedItem={() => setSelectedInspectorItem(null)}
         onUpdateItemStatus={handleUpdateInspectorItemStatus}
         onSelectItem={handleSelectItem}
+        onDeleteItem={handleDeleteInspectorItem}
         onOpenLinkModal={(item) => {
           setActiveTab('planner');
         }}
