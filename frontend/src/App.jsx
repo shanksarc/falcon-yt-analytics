@@ -24,7 +24,7 @@ import RightSidebarDock from './components/RightSidebarDock';
 import MobileBottomNav from './components/MobileBottomNav';
 import { removeLocalPlannedVideo } from './utils/plannerStorage';
 
-import { LayoutDashboard, BarChart3, AlertTriangle, History, Users, Calendar, CheckCircle2 } from 'lucide-react';
+import { LayoutDashboard, BarChart3, AlertTriangle, History, Users, Calendar, CheckCircle2, Sparkles } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('planner'); // 'overview' | 'planner' | 'leaderboard' | 'low-ctr' | 'change-log' | 'competitors'
