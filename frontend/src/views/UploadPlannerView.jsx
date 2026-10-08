@@ -35,9 +35,7 @@ function getStatusColor(pacing) {
 
 export default function UploadPlannerView({ onSelectItem, selectedItem }) {
   const [overview, setOverview] = useState(null);
-  const [selectedSessionId, setSelectedSessionId] = useState(() => {
-    return localStorage.getItem('falcon_planner_active_session') || null;
-  });
+  const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [sessionDetail, setSessionDetail] = useState(null);
   const [allLists, setAllLists] = useState([]);
   const [allPlannedVideos, setAllPlannedVideos] = useState([]);
@@ -56,6 +54,9 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
   const [activeViewTab, setActiveViewTab] = useState('progress');
 
   useEffect(() => {
+    try {
+      localStorage.removeItem('falcon_planner_active_session');
+    } catch (e) {}
     fetchInitialData();
   }, []);
 
@@ -81,12 +82,14 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
   }, [selectedSessionId]);
 
   const handleSelectSession = (sessId) => {
-    setSelectedSessionId(sessId);
-    try {
-      localStorage.setItem('falcon_planner_active_session', sessId);
-    } catch (e) {
-      // Ignore localStorage errors
+    if (sessId && sessId !== 'ALL') {
+      setSelectedSessionId(sessId);
+    } else {
+      setSelectedSessionId(null);
     }
+    try {
+      localStorage.removeItem('falcon_planner_active_session');
+    } catch (e) {}
   };
 
   const fetchInitialData = async () => {
@@ -112,15 +115,11 @@ export default function UploadPlannerView({ onSelectItem, selectedItem }) {
       // Background sync missing to server for serverless persistence
       syncLocalVideosToServer(allPvsJson || []);
 
-      const savedSession = localStorage.getItem('falcon_planner_active_session');
-      if (savedSession && ovJson.sessions?.some(s => s.id === savedSession)) {
-        setSelectedSessionId(savedSession);
-      } else if (ovJson.sessions && ovJson.sessions.length > 0) {
-        const activeWithTarget = ovJson.sessions.find(s => s.is_active && s.target > 0);
-        const preferred = activeWithTarget || ovJson.sessions.find(s => s.is_active) || ovJson.sessions[0];
-        setSelectedSessionId(preferred.id);
-        localStorage.setItem('falcon_planner_active_session', preferred.id);
-      }
+      // Default directly to Full Plan (null)
+      setSelectedSessionId(null);
+      try {
+        localStorage.removeItem('falcon_planner_active_session');
+      } catch (e) {}
     } catch (err) {
       console.error('Failed to load upload planner overview:', err);
     } finally {

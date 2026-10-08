@@ -1856,20 +1856,47 @@ def get_session_progress_analytics(session_id: Optional[str] = None, course_id: 
     all_courses = [dict(r) for r in cursor.fetchall()]
 
     # ---------------- 3. Weekly Velocity Helper (Past 8 Weeks) ----------------
-    def get_velocity_data():
+    def get_velocity_data(c_id=None, s_id=None):
         v_weeks = []
         tot_recent = 0
+
+        where_clauses = ["pv.status = 'Uploaded'"]
+        params_base = []
+        if s_id and s_id not in ("ALL", "", "evergreen"):
+            where_clauses.append("pv.session_id = ?")
+            params_base.append(s_id)
+        elif s_id == "evergreen":
+            where_clauses.append("(pv.session_id IS NULL OR pv.session_id = '')")
+
+        join_lists = ""
+        if c_id and c_id not in ("ALL", ""):
+            join_lists = "JOIN planned_video_lists pvl ON pv.id = pvl.planned_video_id"
+            cursor.execute("SELECT id FROM lists WHERE parent_id = ?", (c_id,))
+            sub_ids = [r["id"] for r in cursor.fetchall()]
+            all_lids = [c_id] + sub_ids
+            p_holders = ",".join(["?"] * len(all_lids))
+            where_clauses.append(f"pvl.list_id IN ({p_holders})")
+            params_base.extend(all_lids)
+
+        where_sql = " AND ".join(where_clauses)
+
         for w_offset in range(7, -1, -1):
             w_start = now - timedelta(days=(w_offset * 7) + now.weekday())
             w_end = w_start + timedelta(days=6)
             w_start_str = w_start.strftime("%Y-%m-%d")
             w_end_str = w_end.strftime("%Y-%m-%d")
-            w_label = w_start.strftime("W%W (%b %d)")
+            w_label = w_start.strftime("W%W")
 
-            cursor.execute("""
-                SELECT count(*) as cnt FROM videos
-                WHERE published_at >= ? AND published_at <= ?
-            """, (w_start_str + "T00:00:00", w_end_str + "T23:59:59"))
+            q = f"""
+                SELECT COUNT(DISTINCT pv.id) as cnt
+                FROM planned_videos pv
+                LEFT JOIN videos v ON pv.linked_video_id = v.id
+                {join_lists}
+                WHERE {where_sql}
+                AND COALESCE(v.published_at, pv.updated_at, pv.created_at) >= ?
+                AND COALESCE(v.published_at, pv.updated_at, pv.created_at) <= ?
+            """
+            cursor.execute(q, tuple(params_base) + (w_start_str + "T00:00:00", w_end_str + "T23:59:59"))
             cnt = cursor.fetchone()["cnt"]
             tot_recent += cnt
 
@@ -1939,21 +1966,21 @@ def get_session_progress_analytics(session_id: Optional[str] = None, course_id: 
                     SELECT DISTINCT pv.*
                     FROM planned_videos pv
                     JOIN planned_video_lists pvl ON pv.id = pvl.planned_video_id
-                    WHERE pvl.list_id IN ({placeholders}) AND (pv.session_id IS NULL OR pv.session_id = '') AND (pv.content_type IS NULL OR pv.content_type = 'video' OR pv.content_type = '')
+                    WHERE pvl.list_id IN ({placeholders}) AND (pv.session_id IS NULL OR pv.session_id = '')
                 """, tuple(all_course_lids))
             else:
                 cursor.execute(f"""
                     SELECT DISTINCT pv.*
                     FROM planned_videos pv
                     JOIN planned_video_lists pvl ON pv.id = pvl.planned_video_id
-                    WHERE pvl.list_id IN ({placeholders}) AND pv.session_id = ? AND (pv.content_type IS NULL OR pv.content_type = 'video' OR pv.content_type = '')
+                    WHERE pvl.list_id IN ({placeholders}) AND pv.session_id = ?
                 """, tuple(all_course_lids) + (session_id,))
         else:
             cursor.execute(f"""
                 SELECT DISTINCT pv.*
                 FROM planned_videos pv
                 JOIN planned_video_lists pvl ON pv.id = pvl.planned_video_id
-                WHERE pvl.list_id IN ({placeholders}) AND (pv.content_type IS NULL OR pv.content_type = 'video' OR pv.content_type = '')
+                WHERE pvl.list_id IN ({placeholders})
             """, tuple(all_course_lids))
 
         planned_videos = [dict(r) for r in cursor.fetchall()]
@@ -2186,7 +2213,7 @@ def get_session_progress_analytics(session_id: Optional[str] = None, course_id: 
             upload_dates, pacing, now
         )
 
-        velocity_data = get_velocity_data()
+        velocity_data = get_velocity_data(c_id=course_id, s_id=session_id)
 
         # YouTube performance for uploaded planned videos in this course
         if session_id and session_id not in ("ALL", ""):
@@ -2282,7 +2309,7 @@ def get_session_progress_analytics(session_id: Optional[str] = None, course_id: 
     # MODE 2: GLOBAL / FULL PLAN (All Videos Planned Irrespective of Course or Session)
     # =========================================================================
     if is_global:
-        cursor.execute("SELECT * FROM planned_videos WHERE (content_type IS NULL OR content_type = 'video' OR content_type = '')")
+        cursor.execute("SELECT * FROM planned_videos")
         planned_videos = [dict(r) for r in cursor.fetchall()]
         total_entries = len(planned_videos)
 
@@ -2565,7 +2592,7 @@ def get_session_progress_analytics(session_id: Optional[str] = None, course_id: 
             "color": sub_pacing.get("color", "#5A5A5A")
         })
 
-    velocity_data = get_velocity_data()
+    velocity_data = get_velocity_data(s_id=session_id)
 
     # YouTube performance for uploaded planned videos in this session
     cursor.execute("""
@@ -2591,10 +2618,14 @@ def get_session_progress_analytics(session_id: Optional[str] = None, course_id: 
     return {
         "mode": "SESSION",
         "session": session,
+        "sessions": [session],
         "all_courses": all_courses,
         "target": target_count,
         "uploaded": uploaded_count,
         "planned": total_entries,
+        "scheduled": scheduled_count,
+        "backlog": planned_backlog_count,
+        "overdue": overdue_count,
         "completion_pct": pacing.get("completion_pct", 0),
         "pacing": pacing,
         "youtube_stats": youtube_stats,

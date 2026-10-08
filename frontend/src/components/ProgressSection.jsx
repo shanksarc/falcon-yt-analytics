@@ -214,6 +214,8 @@ function formatCourseShortName(name) {
 export default function ProgressSection({ 
   initialSessionId = null, 
   activeSessionId: propActiveSessionId, 
+  onSelectSession,
+  onOpenTargetModal,
   onNavigateToVideos,
   refreshTrigger = 0
 }) {
@@ -341,6 +343,7 @@ export default function ProgressSection({
   const handleSelectCourse = (courseId) => {
     setActiveCourseId(courseId);
     setActiveSessionId(null);
+    if (onSelectSession) onSelectSession(null);
     setCourseBreakdownTab('subjects');
     // Fix One: When clicking a course, open subjects as table list. When going back, show course card style.
     if (courseId) {
@@ -353,7 +356,9 @@ export default function ProgressSection({
   };
 
   const handleSelectSession = (sessId) => {
-    setActiveSessionId(sessId === activeSessionId ? null : sessId);
+    const nextSess = sessId === activeSessionId ? null : sessId;
+    setActiveSessionId(nextSess);
+    if (onSelectSession) onSelectSession(nextSess);
   };
 
   if (loading && !analytics) {
@@ -398,7 +403,7 @@ export default function ProgressSection({
   const isGlobalMode = mode === 'GLOBAL';
   const isCourseMode = mode === 'COURSE';
 
-  const activeSessionObj = sessions.find(s => s.id === activeSessionId);
+  const activeSessionObj = sessions.find(s => s.id === activeSessionId) || (analytics?.session?.id === activeSessionId ? analytics?.session : null);
   const cleanActiveSession = activeSessionObj ? formatSessionLabel(activeSessionObj.name) : '';
 
   // ---------------- 1. Radial Dial Calculation ----------------
@@ -504,7 +509,10 @@ export default function ProgressSection({
           {/* Full Plan Pill */}
           <button
             type="button"
-            onClick={() => handleSelectCourse(null)}
+            onClick={() => {
+              handleSelectCourse(null);
+              handleSelectSession(null);
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -616,7 +624,7 @@ export default function ProgressSection({
 
             <button
               type="button"
-              onClick={() => setActiveSessionId(null)}
+              onClick={() => handleSelectSession(null)}
               style={{
                 padding: '0.18rem 0.55rem',
                 borderRadius: '4px',
@@ -691,13 +699,17 @@ export default function ProgressSection({
               <span style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B', letterSpacing: '-0.01em' }}>
                 {isGlobalMode 
                   ? 'Full Plan Target' 
-                  : activeSessionId && cleanActiveSession
-                    ? `${course?.name} · ${cleanActiveSession}` 
-                    : `${course?.name} Target`}
+                  : course?.name && activeSessionId && cleanActiveSession
+                    ? `${course.name} · ${cleanActiveSession}` 
+                    : course?.name
+                      ? `${course.name} Target`
+                      : activeSessionObj
+                        ? `${cleanActiveSession || formatSessionLabel(activeSessionObj.name)} Target`
+                        : 'Curriculum Target'}
               </span>
             </div>
             <button
-              onClick={() => setShowTargetModal(true)}
+              onClick={() => onOpenTargetModal ? onOpenTargetModal() : setShowTargetModal(true)}
               style={{
                 fontSize: '11px',
                 fontWeight: 600,
