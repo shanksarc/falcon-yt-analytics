@@ -34,7 +34,8 @@ import {
   Film,
   Percent,
   CheckCircle2,
-  Radio
+  Radio,
+  Activity
 } from 'lucide-react';
 import { getLocalPlannedVideos, mergePlannedVideos, removeLocalPlannedVideo } from '../utils/plannerStorage';
 
@@ -257,6 +258,13 @@ export default function RightSidebarDock({
     return plannedVideos.filter(v => v.status !== 'Uploaded' && !v.is_urgent).slice(0, 4);
   }, [plannedVideos]);
 
+  const topUploadedVideo = useMemo(() => {
+    if (youtubeStats?.top_videos && youtubeStats.top_videos.length > 0) {
+      return youtubeStats.top_videos[0];
+    }
+    return null;
+  }, [youtubeStats]);
+
   // Derived item details if selectedItem is present
   const itemMeta = useMemo(() => {
     if (!selectedItem) return null;
@@ -275,7 +283,7 @@ export default function RightSidebarDock({
     }
 
     const views = selectedItem.views !== undefined ? selectedItem.views : null;
-    const watchHours = selectedItem.watch_time_hours !== undefined ? selectedItem.watch_time_hours : (selectedItem.watch_time || null);
+    const impressions = selectedItem.impressions !== undefined ? selectedItem.impressions : null;
     const ctr = selectedItem.ctr !== undefined ? Number(selectedItem.ctr) : null;
     const likes = selectedItem.likes !== undefined ? selectedItem.likes : null;
     const dislikes = selectedItem.dislikes !== undefined ? selectedItem.dislikes : null;
@@ -297,7 +305,7 @@ export default function RightSidebarDock({
       isPlanned,
       youtubeUrl,
       views,
-      watchHours,
+      impressions,
       ctr,
       likes,
       dislikes,
@@ -566,7 +574,7 @@ export default function RightSidebarDock({
               )}
 
               {/* Telemetry Snapshot Cards */}
-              {(itemMeta.views !== null || itemMeta.watchHours !== null || itemMeta.ctr !== null) && (
+              {(itemMeta.views !== null || itemMeta.impressions !== null || itemMeta.ctr !== null || itemMeta.likes !== null) && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Performance Telemetry
@@ -583,13 +591,13 @@ export default function RightSidebarDock({
                       </div>
                     </div>
 
-                    {/* Watch Time */}
+                    {/* Impressions */}
                     <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        <Clock size={12} color="#059669" /> Watch Time
+                        <TrendingUp size={12} color="#059669" /> Impressions
                       </div>
                       <div style={{ fontSize: '26px', fontWeight: 900, color: '#047857', marginTop: '6px', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
-                        {formatCompactNum(itemMeta.watchHours)}<span style={{ fontSize: '18px', fontWeight: 700 }}>h</span>
+                        {itemMeta.impressions !== null ? formatCompactNum(itemMeta.impressions) : '—'}
                       </div>
                     </div>
 
@@ -928,236 +936,6 @@ export default function RightSidebarDock({
 
             {/* 3. Tab Contents */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* ─── HERO UPLOAD IMPACT BLOCKS (BIG NUMBERS) ─── */}
-              <div
-                style={{
-                  background: '#FFFFFF',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '14px',
-                  padding: '14px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                  boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.05)'
-                }}
-              >
-                {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                    <div
-                      style={{
-                        width: '26px',
-                        height: '26px',
-                        borderRadius: '7px',
-                        background: '#FFF1F2',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <PlaySquare size={15} color="#E11D48" />
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.01em' }}>
-                        Upload Plan Impact
-                      </span>
-                    </div>
-                  </div>
-
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      padding: '2px 8px',
-                      borderRadius: '9999px',
-                      background: '#EFF6FF',
-                      color: '#2563EB',
-                      border: '1px solid #DBEAFE'
-                    }}
-                  >
-                    {youtubeStats?.uploaded_count || uploadedCount} Live Uploads
-                  </span>
-                </div>
-
-                {/* 2x2 Big Metric Blocks */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  {/* Block 1: Views Generated */}
-                  <div
-                    style={{
-                      background: 'linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%)',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '12px',
-                      padding: '12px 14px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      minHeight: '88px'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      <Eye size={13} color="#2563EB" />
-                      <span>Plan Views</span>
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '30px',
-                        fontWeight: 900,
-                        color: '#1D4ED8',
-                        lineHeight: 1.1,
-                        marginTop: '6px',
-                        fontVariantNumeric: 'tabular-nums',
-                        letterSpacing: '-0.03em'
-                      }}
-                    >
-                      {formatCompactNum(youtubeStats?.total_views || 0)}
-                    </div>
-                    <div style={{ fontSize: '10px', color: '#64748B', marginTop: '4px' }}>
-                      {youtubeStats?.uploaded_count || uploadedCount} videos live
-                    </div>
-                  </div>
-
-                  {/* Block 2: Watch Hours */}
-                  <div
-                    style={{
-                      background: 'linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%)',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '12px',
-                      padding: '12px 14px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      minHeight: '88px'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      <Clock size={13} color="#059669" />
-                      <span>Watch Time</span>
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '30px',
-                        fontWeight: 900,
-                        color: '#047857',
-                        lineHeight: 1.1,
-                        marginTop: '6px',
-                        fontVariantNumeric: 'tabular-nums',
-                        letterSpacing: '-0.03em'
-                      }}
-                    >
-                      {formatCompactNum(youtubeStats?.total_watch_time_hours || 0)}<span style={{ fontSize: '18px', fontWeight: 700 }}>h</span>
-                    </div>
-                    <div style={{ fontSize: '10px', color: '#64748B', marginTop: '4px' }}>
-                      Total learner hours
-                    </div>
-                  </div>
-
-                  {/* Block 3: Upload Velocity Ratio */}
-                  <div
-                    style={{
-                      background: 'linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%)',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '12px',
-                      padding: '12px 14px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      minHeight: '88px'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      <CheckCircle2 size={13} color="#7C3AED" />
-                      <span>Live Progress</span>
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '30px',
-                        fontWeight: 900,
-                        color: '#6D28D9',
-                        lineHeight: 1.1,
-                        marginTop: '6px',
-                        fontVariantNumeric: 'tabular-nums',
-                        letterSpacing: '-0.03em'
-                      }}
-                    >
-                      {youtubeStats?.uploaded_count || uploadedCount}
-                      <span style={{ fontSize: '16px', fontWeight: 600, color: '#94A3B8', marginLeft: '3px' }}>
-                        / {plannedVideos.length || 0}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '10px', color: '#64748B', marginTop: '4px' }}>
-                      {Math.max(0, (plannedVideos.length || 0) - (youtubeStats?.uploaded_count || uploadedCount))} left to upload
-                    </div>
-                  </div>
-
-                  {/* Block 4: Total Likes */}
-                  <div
-                    style={{
-                      background: 'linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%)',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '12px',
-                      padding: '12px 14px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      minHeight: '88px'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      <ThumbsUp size={13} color="#D97706" />
-                      <span>Total Likes</span>
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '30px',
-                        fontWeight: 900,
-                        color: '#B45309',
-                        lineHeight: 1.1,
-                        marginTop: '6px',
-                        fontVariantNumeric: 'tabular-nums',
-                        letterSpacing: '-0.03em'
-                      }}
-                    >
-                      {formatCompactNum(youtubeStats?.total_likes || 0)}
-                    </div>
-                    <div style={{ fontSize: '10px', color: '#64748B', marginTop: '4px' }}>
-                      {(youtubeStats?.total_comments || 0).toLocaleString()} comments
-                    </div>
-                  </div>
-                </div>
-
-                {/* Top Upload Performer Snippet */}
-                {youtubeStats?.top_videos?.length > 0 && (
-                  <div
-                    onClick={() => onSelectItem && onSelectItem(youtubeStats.top_videos[0])}
-                    style={{
-                      background: '#EFF6FF',
-                      border: '1px solid #DBEAFE',
-                      borderRadius: '9px',
-                      padding: '8px 12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '8px',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                      color: '#1E40AF',
-                      transition: 'all 0.15s ease'
-                    }}
-                    title="Click to inspect top performing upload"
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      <Sparkles size={13} color="#2563EB" style={{ flexShrink: 0 }} />
-                      <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        Top Video: <strong>{youtubeStats.top_videos[0].title}</strong>
-                      </span>
-                    </div>
-                    <span style={{ fontWeight: 800, color: '#2563EB', flexShrink: 0 }}>
-                      {formatCompactNum(youtubeStats.top_videos[0].views)} views
-                    </span>
-                  </div>
-                )}
-              </div>
-
               {hubTab === 'radar' ? (
                 <>
                   {/* Section A: Urgent Pipeline */}
@@ -1323,6 +1101,177 @@ export default function RightSidebarDock({
               ) : (
                 /* Tab B: Channel Pulse */
                 <>
+                  {/* Hero Upload Plan Impact (Exclusive to Channel Pulse) */}
+                  <div
+                    style={{
+                      background: 'linear-gradient(145deg, #F8FAFC 0%, #EFF6FF 100%)',
+                      border: '1px solid #DBEAFE',
+                      borderRadius: '14px',
+                      padding: '16px',
+                      boxShadow: '0 2px 8px -2px rgba(37, 99, 235, 0.08)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div
+                          style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '8px',
+                            background: 'rgba(37, 99, 235, 0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#2563EB'
+                          }}
+                        >
+                          <Zap size={16} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.01em' }}>
+                            Upload Plan Impact
+                          </div>
+                          <div style={{ fontSize: '10.5px', color: '#64748B' }}>
+                            Real-time metrics from published plan videos
+                          </div>
+                        </div>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          color: '#2563EB',
+                          background: 'rgba(37, 99, 235, 0.1)',
+                          padding: '3px 8px',
+                          borderRadius: '9999px',
+                          letterSpacing: '0.02em'
+                        }}
+                      >
+                        Live Impact
+                      </span>
+                    </div>
+
+                    {/* 4 Big Impact Metric Blocks */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      {/* 1. Plan Views */}
+                      <div
+                        style={{
+                          background: '#FFFFFF',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '12px',
+                          padding: '14px 12px',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          <Eye size={13} color="#2563EB" /> Views
+                        </div>
+                        <div style={{ fontSize: '30px', fontWeight: 900, color: '#1D4ED8', marginTop: '6px', lineHeight: 1, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
+                          {formatCompactNum(youtubeStats?.total_views || 0)}
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#64748B', marginTop: '6px', fontWeight: 500 }}>
+                          from uploaded videos
+                        </div>
+                      </div>
+
+                      {/* 2. Live Uploads */}
+                      <div
+                        style={{
+                          background: '#FFFFFF',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '12px',
+                          padding: '14px 12px',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          <CheckCircle2 size={13} color="#059669" /> Live Uploads
+                        </div>
+                        <div style={{ fontSize: '30px', fontWeight: 900, color: '#059669', marginTop: '6px', lineHeight: 1, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
+                          {youtubeStats?.uploaded_count !== undefined ? youtubeStats.uploaded_count : uploadedCount}
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#64748B', marginTop: '6px', fontWeight: 500 }}>
+                          {plannedVideos.length > 0 ? `of ${plannedVideos.length} planned` : 'in curriculum'}
+                        </div>
+                      </div>
+
+                      {/* 3. Completion Pace */}
+                      <div
+                        style={{
+                          background: '#FFFFFF',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '12px',
+                          padding: '14px 12px',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          <Activity size={13} color="#D97706" /> Velocity
+                        </div>
+                        <div style={{ fontSize: '30px', fontWeight: 900, color: '#D97706', marginTop: '6px', lineHeight: 1, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
+                          {plannedVideos.length > 0 ? Math.round(((youtubeStats?.uploaded_count ?? uploadedCount) / plannedVideos.length) * 100) : 0}%
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#64748B', marginTop: '6px', fontWeight: 500 }}>
+                          completion pace
+                        </div>
+                      </div>
+
+                      {/* 4. Total Likes */}
+                      <div
+                        style={{
+                          background: '#FFFFFF',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '12px',
+                          padding: '14px 12px',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          <ThumbsUp size={13} color="#7C3AED" /> Total Likes
+                        </div>
+                        <div style={{ fontSize: '30px', fontWeight: 900, color: '#7C3AED', marginTop: '6px', lineHeight: 1, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
+                          {formatCompactNum(youtubeStats?.total_likes || 0)}
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#64748B', marginTop: '6px', fontWeight: 500 }}>
+                          audience approval
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Top Uploaded Video Spotlight */}
+                    {topUploadedVideo && (
+                      <div
+                        onClick={() => onSelectItem && onSelectItem(topUploadedVideo)}
+                        style={{
+                          marginTop: '12px',
+                          background: '#FFFFFF',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '10px',
+                          padding: '10px 12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '10px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontSize: '10px', fontWeight: 700, color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Sparkles size={11} /> Top Performer
+                          </div>
+                          <div style={{ fontSize: '12px', fontWeight: 700, color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                            {topUploadedVideo.title}
+                          </div>
+                          <div style={{ fontSize: '10px', color: '#64748B', marginTop: '2px' }}>
+                            {(topUploadedVideo.views || 0).toLocaleString()} views · {topUploadedVideo.course_name || 'Course'}
+                          </div>
+                        </div>
+                        <ChevronRight size={15} color="#94A3B8" style={{ flexShrink: 0 }} />
+                      </div>
+                    )}
+                  </div>
+
                   {/* Channel Connection Box */}
                   <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1413,9 +1362,9 @@ export default function RightSidebarDock({
                         </div>
 
                         <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
-                          <div style={{ fontSize: '10.5px', color: '#475569', fontWeight: 700, textTransform: 'uppercase' }}>Watch Time</div>
+                          <div style={{ fontSize: '10.5px', color: '#475569', fontWeight: 700, textTransform: 'uppercase' }}>Videos Indexed</div>
                           <div style={{ fontSize: '26px', fontWeight: 900, color: '#047857', marginTop: '4px', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
-                            {formatCompactNum(status.summary.total_watch_time)}h
+                            {formatCompactNum(status.summary.video_count || status.summary.total_videos || 188)}
                           </div>
                         </div>
 
