@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Link2, Check, ExternalLink, Search, PlayCircle, Eye, ThumbsUp, AlertCircle, Unlink } from 'lucide-react';
+import { saveLocalPlannedVideo } from '../utils/plannerStorage';
 
 export default function LinkYouTubeModal({ plannedVideo, onClose, onSuccess }) {
   const [inputValue, setInputValue] = useState('');
@@ -96,6 +97,14 @@ export default function LinkYouTubeModal({ plannedVideo, onClose, onSuccess }) {
 
       if (res.ok) {
         const data = await res.json();
+        // Persist the linked state to localStorage so Vercel cold-starts don't lose the link
+        saveLocalPlannedVideo({
+          ...plannedVideo,
+          linked_video_id: extractedId,
+          status: 'Uploaded',
+          production_stage: 'Uploaded',
+          updated_at: new Date().toISOString()
+        });
         if (onSuccess) onSuccess(data);
         onClose();
       } else {
@@ -119,6 +128,14 @@ export default function LinkYouTubeModal({ plannedVideo, onClose, onSuccess }) {
         body: JSON.stringify({})
       });
       if (res.ok) {
+        // Persist the unlinked state to localStorage so cold-starts reflect the unlink
+        saveLocalPlannedVideo({
+          ...plannedVideo,
+          linked_video_id: null,
+          status: 'Planned',
+          production_stage: plannedVideo.production_stage === 'Uploaded' ? 'Idea' : plannedVideo.production_stage,
+          updated_at: new Date().toISOString()
+        });
         if (onSuccess) onSuccess({ unlinked: true });
         onClose();
       } else {

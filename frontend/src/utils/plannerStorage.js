@@ -140,20 +140,41 @@ export async function syncLocalVideosToServer(serverVideos = []) {
   const local = getLocalPlannedVideos();
   const deletedIds = Array.from(getDeletedPlannedVideoIds());
 
-  const serverIds = new Set((serverVideos || []).map(v => v.id));
-  const missingOnServer = local.filter(v => !serverIds.has(v.id));
+  const serverMap = new Map((serverVideos || []).map(v => [v.id, v]));
+  const missingOnServer = local.filter(v => !serverMap.has(v.id));
+
+  // Find videos that exist on server but have a newer local update
+  // (critical for linked_video_id / status changes surviving cold-starts)
+  const staleOnServer = local.filter(v => {
+    if (!serverMap.has(v.id)) return false;
+    const serverItem = serverMap.get(v.id);
+    const serverTime = serverItem.updated_at ? new Date(serverItem.updated_at).getTime() : 0;
+    const localTime = v.updated_at ? new Date(v.updated_at).getTime() : 0;
+    // Only re-sync if local is newer AND has meaningful link/status changes
+    return localTime > serverTime && (
+      v.linked_video_id !== serverItem.linked_video_id ||
+      v.status !== serverItem.status
+    );
+  });
 
   // If nothing to sync or purge, return early
-  if (missingOnServer.length === 0 && deletedIds.length === 0) return;
+  if (missingOnServer.length === 0 && deletedIds.length === 0 && staleOnServer.length === 0) return;
 
   try {
-    // Call bulk client sync endpoint with both missing videos and deleted IDs
+    // Call bulk client sync endpoint with missing videos, deleted IDs, and stale updates
     const syncRes = await fetch('/api/planner/sync-client', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         videos: missingOnServer,
-        deleted_ids: deletedIds
+        deleted_ids: deletedIds,
+        link_updates: staleOnServer.map(v => ({
+          id: v.id,
+          linked_video_id: v.linked_video_id || null,
+          status: v.status,
+          production_stage: v.production_stage,
+          updated_at: v.updated_at
+        }))
       })
     });
 

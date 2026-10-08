@@ -1500,16 +1500,57 @@ def sync_client_planned_videos(payload: Dict[str, Any]):
 
         synced_count += 1
 
+    # 3. Process link_updates — apply linked_video_id / status changes for already-existing planned videos.
+    # This is the key fix for manual links surviving Vercel cold-starts.
+    link_updates = payload.get("link_updates") or []
+    links_applied = 0
+    for lu in link_updates:
+        lu_id = lu.get("id")
+        if not lu_id:
+            continue
+        cursor.execute("SELECT id FROM planned_videos WHERE id = ?", (lu_id,))
+        if not cursor.fetchone():
+            continue  # Video doesn't exist on this instance; skip (will be synced via 'videos' list)
+        linked_vid = lu.get("linked_video_id") or None
+        lu_status = lu.get("status") or ("Uploaded" if linked_vid else "Planned")
+        lu_stage = lu.get("production_stage") or ("Uploaded" if linked_vid else "Idea")
+        lu_updated = lu.get("updated_at") or now_str
+        # Ensure the linked video has at least a stub record in videos table to avoid FK issues
+        if linked_vid:
+            cursor.execute("SELECT id FROM videos WHERE id = ?", (linked_vid,))
+            if not cursor.fetchone():
+                cursor.execute("""
+                    INSERT OR IGNORE INTO videos (
+                        id, title, description, thumbnail_url, published_at,
+                        duration_seconds, course, topic, format, category_override,
+                        views, likes, comments, impressions, ctr, avg_view_duration,
+                        watch_time_hours, subscribers_gained, updated_at
+                    ) VALUES (?, ?, '', ?, ?, 0, 'General Prep', 'General / Strategy', 'Core Lecture', 0, 0, 0, 0, 0, 5.0, 0, 0.0, 0, ?)
+                """, (
+                    linked_vid,
+                    f"YouTube Video ({linked_vid})",
+                    f"https://img.youtube.com/vi/{linked_vid}/hqdefault.jpg",
+                    now_str,
+                    now_str
+                ))
+        cursor.execute("""
+            UPDATE planned_videos
+            SET linked_video_id = ?, status = ?, production_stage = ?, updated_at = ?
+            WHERE id = ?
+        """, (linked_vid, lu_status, lu_stage, lu_updated, lu_id))
+        cursor.execute("DELETE FROM match_review_queue WHERE planned_video_id = ?", (lu_id,))
+        links_applied += 1
+
     conn.commit()
     conn.close()
 
-    if synced_count > 0:
+    if synced_count > 0 or links_applied > 0:
         try:
             run_auto_matching()
         except Exception:
             pass
 
-    return {"status": "success", "synced": synced_count, "purged_deleted": len(deleted_ids)}
+    return {"status": "success", "synced": synced_count, "purged_deleted": len(deleted_ids), "links_applied": links_applied}
 
 @app.post("/api/planner/validate-entries")
 def validate_entries_endpoint(entries: List[RawPlannerEntry]):

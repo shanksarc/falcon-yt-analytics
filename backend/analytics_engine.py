@@ -1338,8 +1338,8 @@ def string_similarity(s1: str, s2: str) -> float:
 def run_auto_matching() -> Dict[str, Any]:
     """
     Runs title similarity matching between published videos in `videos` and open planned entries.
-    Every match with confidence >= min_confidence is placed into match_review_queue for user confirmation.
-    No videos are silently linked without user confirmation.
+    - Matches with confidence >= 0.90: auto-linked directly (high confidence, no user review needed).
+    - Matches with confidence >= 0.55 (< 0.90): placed in match_review_queue for user confirmation.
     """
     conn = get_connection()
     cursor = conn.cursor()
@@ -1353,7 +1353,11 @@ def run_auto_matching() -> Dict[str, Any]:
     all_videos = [dict(r) for r in cursor.fetchall()]
 
     review_queue_added = 0
+    auto_linked_count = 0
     now_str = datetime.now().isoformat()
+
+    # Threshold for direct auto-link (no review needed)
+    AUTO_LINK_THRESHOLD = 0.90
 
     # Query all permanently rejected matches across system
     cursor.execute("SELECT planned_video_id, video_id FROM rejected_matches")
@@ -1382,7 +1386,26 @@ def run_auto_matching() -> Dict[str, Any]:
                 best_score = sim
                 best_match = v
 
-        if best_match and best_score >= min_confidence:
+        if best_match and best_score >= AUTO_LINK_THRESHOLD:
+            # HIGH CONFIDENCE: auto-link directly — no review queue needed
+            cursor.execute("""
+                UPDATE planned_videos
+                SET linked_video_id = ?, status = 'Uploaded', production_stage = 'Uploaded', updated_at = ?
+                WHERE id = ?
+            """, (best_match["id"], now_str, p["id"]))
+            # Clear any stale pending entries for this planned video
+            cursor.execute("DELETE FROM match_review_queue WHERE planned_video_id = ?", (p["id"],))
+            # Sync to list_videos so syllabus grid reflects covered status
+            cursor.execute("SELECT list_id FROM planned_video_lists WHERE planned_video_id = ?", (p["id"],))
+            for r in cursor.fetchall():
+                cursor.execute("""
+                    INSERT OR IGNORE INTO list_videos (list_id, video_id, auto_assigned, created_at)
+                    VALUES (?, ?, 1, ?)
+                """, (r["list_id"], best_match["id"], now_str))
+            auto_linked_count += 1
+
+        elif best_match and best_score >= min_confidence:
+            # MEDIUM CONFIDENCE: add to review queue for user confirmation
             pending = next((r for r in existing_rows if r["status"] == 'PENDING'), None)
             if pending:
                 if best_match["id"] != pending["video_id"] or abs(best_score - pending["confidence"]) > 0.001:
@@ -1405,6 +1428,7 @@ def run_auto_matching() -> Dict[str, Any]:
     conn.close()
 
     return {
+        "auto_linked": auto_linked_count,
         "review_queue_added": review_queue_added,
         "unlinked_planned_checked": len(open_planned)
     }
