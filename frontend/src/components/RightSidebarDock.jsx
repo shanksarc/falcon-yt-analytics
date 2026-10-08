@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   PlaySquare,
   Eye,
   Clock,
   ThumbsUp,
+  ThumbsDown,
   MessageSquare,
   AlertTriangle,
   X,
@@ -25,9 +26,16 @@ import {
   AlertCircle,
   LayoutDashboard,
   CalendarDays,
-  Trash2
+  Trash2,
+  RefreshCw,
+  TrendingUp,
+  ChevronRight,
+  ChevronLeft,
+  Film,
+  Percent,
+  CheckCircle2,
+  Radio
 } from 'lucide-react';
-import { getVideoTrackInfo } from './FullVideoListView';
 import { getLocalPlannedVideos, mergePlannedVideos, removeLocalPlannedVideo } from '../utils/plannerStorage';
 
 function formatCompactNum(num) {
@@ -37,9 +45,28 @@ function formatCompactNum(num) {
   return num.toLocaleString();
 }
 
-/**
- * RightSidebarDock - Static & Page-Contextual Split Architecture
- */
+function getPublishYear(dateStr) {
+  if (!dateStr) return null;
+  const match = String(dateStr).match(/\b(20\d\d|19\d\d)\b/);
+  return match ? match[1] : (dateStr.length >= 4 ? dateStr.substring(0, 4) : null);
+}
+
+function formatSyncTime(timestamp) {
+  if (!timestamp) return 'Today';
+  try {
+    const date = new Date(timestamp);
+    const diffMs = Date.now() - date.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+    if (diffMins < 2) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.round(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${Math.round(diffHours / 24)}d ago`;
+  } catch {
+    return 'Today';
+  }
+}
+
 export default function RightSidebarDock({
   activeTab = 'planner',
   status,
@@ -49,12 +76,22 @@ export default function RightSidebarDock({
   onSelectItem,
   onOpenLinkModal,
   onDeleteItem,
+  onLogChangeForVideo,
+  onEditCategoryForVideo,
+  onEditListsForVideo,
+  onNavigateTab,
+  onSyncChannel,
+  isSyncing = false,
   isOpen = false,
   onClose
 }) {
+  // Navigation within the non-selected dock view: 'radar' | 'pulse'
+  const [hubTab, setHubTab] = useState('radar');
+
   const [youtubeStats, setYoutubeStats] = useState(null);
   const [uploadedCount, setUploadedCount] = useState(0);
   const [plannedVideos, setPlannedVideos] = useState([]);
+  const [lowCtrVideos, setLowCtrVideos] = useState([]);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isDeletingItem, setIsDeletingItem] = useState(false);
   const [localStatus, setLocalStatus] = useState(null);
@@ -62,23 +99,26 @@ export default function RightSidebarDock({
   // Sync local status when selectedItem changes
   useEffect(() => {
     if (selectedItem) {
-      setLocalStatus(selectedItem.status || 'Planned');
+      setLocalStatus(selectedItem.status || (selectedItem.privacy_status === 'public' ? 'Published' : 'Planned'));
     } else {
       setLocalStatus(null);
     }
   }, [selectedItem]);
 
-  // Fetch YouTube Impact stats & Planned videos for the static area
+  // Fetch initial data
   useEffect(() => {
     fetchYouTubeImpact();
     fetchPlannedVideos();
+    fetchLowCTRAlerts();
   }, [status?.last_youtube_sync, selectedItem?.status, selectedItem?.is_urgent]);
 
+  // Listen to planner updates
   useEffect(() => {
     const handlePlannerEvent = () => {
       const localVideos = getLocalPlannedVideos();
       setPlannedVideos(prev => mergePlannedVideos(prev, localVideos));
       fetchYouTubeImpact();
+      fetchLowCTRAlerts();
     };
     window.addEventListener('falcon_planner_updated', handlePlannerEvent);
     return () => window.removeEventListener('falcon_planner_updated', handlePlannerEvent);
@@ -117,18 +157,30 @@ export default function RightSidebarDock({
     }
   };
 
-  // Toggle Urgent status for any planned video (Fix 2)
+  const fetchLowCTRAlerts = async () => {
+    try {
+      const res = await fetch('/api/low-ctr');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setLowCtrVideos(data.slice(0, 4));
+        }
+      }
+    } catch (err) {
+      console.debug('Failed to fetch low CTR for right dock:', err);
+    }
+  };
+
+  // Toggle Urgent status for any planned video
   const handleToggleUrgent = async (video) => {
     if (!video || !video.id) return;
     const currentUrgent = Boolean(video.is_urgent);
     const newUrgentVal = currentUrgent ? 0 : 1;
 
-    // Optimistically update plannedVideos list
     setPlannedVideos(prev =>
       prev.map(v => (v.id === video.id ? { ...v, is_urgent: newUrgentVal } : v))
     );
 
-    // If currently selected in inspector, update selected item
     if (selectedItem && selectedItem.id === video.id && onSelectItem) {
       onSelectItem({ ...selectedItem, is_urgent: newUrgentVal });
     }
@@ -141,7 +193,6 @@ export default function RightSidebarDock({
       });
     } catch (err) {
       console.error('Failed to toggle urgent:', err);
-      // Revert on error
       fetchPlannedVideos();
     }
   };
@@ -162,6 +213,7 @@ export default function RightSidebarDock({
         });
       }
       fetchPlannedVideos();
+      fetchYouTubeImpact();
     } catch (err) {
       console.error('Failed to update status from inspector:', err);
     } finally {
@@ -171,7 +223,7 @@ export default function RightSidebarDock({
 
   const handleDeleteItem = async () => {
     if (!selectedItem || !selectedItem.id || isDeletingItem) return;
-    const title = selectedItem.title || selectedItem.name || 'this planned video';
+    const title = selectedItem.title || selectedItem.name || 'this entry';
     if (!window.confirm(`Are you sure you want to permanently delete "${title}"?`)) return;
     setIsDeletingItem(true);
     try {
@@ -190,35 +242,72 @@ export default function RightSidebarDock({
       fetchPlannedVideos();
     } catch (err) {
       console.error('Delete item error:', err);
-      alert('Failed to delete planned video: ' + err.message);
+      alert('Failed to delete: ' + err.message);
     } finally {
       setIsDeletingItem(false);
     }
   };
 
-  const formatSyncTime = (timestamp) => {
-    if (!timestamp) return 'Today';
-    try {
-      const date = new Date(timestamp);
-      const diffMs = Date.now() - date.getTime();
-      const diffMins = Math.round(diffMs / 60000);
-      if (diffMins < 2) return 'Just now';
-      if (diffMins < 60) return `${diffMins}m ago`;
-      const diffHours = Math.round(diffMins / 60);
-      if (diffHours < 24) return `${diffHours}h ago`;
-      return `${Math.round(diffHours / 24)}d ago`;
-    } catch {
-      return 'Today';
+  // Filter urgent & upcoming
+  const urgentVideos = useMemo(() => {
+    return plannedVideos.filter(v => Boolean(v.is_urgent) && v.status !== 'Uploaded');
+  }, [plannedVideos]);
+
+  const upcomingWeekVideos = useMemo(() => {
+    return plannedVideos.filter(v => v.status !== 'Uploaded' && !v.is_urgent).slice(0, 4);
+  }, [plannedVideos]);
+
+  // Derived item details if selectedItem is present
+  const itemMeta = useMemo(() => {
+    if (!selectedItem) return null;
+    const title = selectedItem.title || selectedItem.name || selectedItem.topic_name || 'Untitled Video';
+    const course = selectedItem.course_name || selectedItem.course || selectedItem.course_code || null;
+    const subject = selectedItem.subject_name || selectedItem.subject || selectedItem.topic || null;
+    const isShort = Boolean(selectedItem.content_type === 'short' || selectedItem.is_short || selectedItem.format?.toLowerCase()?.includes('short'));
+    const isPlanned = Boolean(selectedItem.status && ['planned', 'scheduled', 'uploaded', 'in progress', 'review'].includes(selectedItem.status.toLowerCase()));
+    
+    // Determine YouTube URL
+    let youtubeUrl = selectedItem.youtube_url || null;
+    if (!youtubeUrl && selectedItem.youtube_video_id) {
+      youtubeUrl = `https://www.youtube.com/watch?v=${selectedItem.youtube_video_id}`;
+    } else if (!youtubeUrl && selectedItem.id && !selectedItem.id.startsWith('pv_') && !selectedItem.id.startsWith('topic_') && !selectedItem.id.startsWith('list_')) {
+      youtubeUrl = `https://www.youtube.com/watch?v=${selectedItem.id}`;
     }
-  };
 
-  // Urgent videos (Fix 1 & 2)
-  const urgentVideos = plannedVideos.filter(v => Boolean(v.is_urgent) && v.status !== 'Uploaded');
+    const views = selectedItem.views !== undefined ? selectedItem.views : null;
+    const watchHours = selectedItem.watch_time_hours !== undefined ? selectedItem.watch_time_hours : (selectedItem.watch_time || null);
+    const ctr = selectedItem.ctr !== undefined ? Number(selectedItem.ctr) : null;
+    const likes = selectedItem.likes !== undefined ? selectedItem.likes : null;
+    const dislikes = selectedItem.dislikes !== undefined ? selectedItem.dislikes : null;
+    const comments = selectedItem.comments_count !== undefined ? selectedItem.comments_count : (selectedItem.comments || null);
+    const publishYear = getPublishYear(selectedItem.published_at || selectedItem.publish_date || selectedItem.created_at);
 
-  // Upcoming week planned videos (up to 4 non-urgent videos)
-  const upcomingWeekVideos = plannedVideos
-    .filter(v => v.status !== 'Uploaded' && !v.is_urgent)
-    .slice(0, 4);
+    // Calculate like ratio
+    let likeRatio = null;
+    if (likes !== null && likes > 0) {
+      const totalVotes = likes + (dislikes || 0);
+      likeRatio = totalVotes > 0 ? Math.round((likes / totalVotes) * 100) : 100;
+    }
+
+    return {
+      title,
+      course,
+      subject,
+      isShort,
+      isPlanned,
+      youtubeUrl,
+      views,
+      watchHours,
+      ctr,
+      likes,
+      dislikes,
+      likeRatio,
+      comments,
+      publishYear,
+      isUrgent: Boolean(selectedItem.is_urgent),
+      isFlaggedCTR: Boolean((ctr !== null && ctr < 4.0) || selectedItem.is_flagged)
+    };
+  }, [selectedItem]);
 
   return (
     <>
@@ -244,1036 +333,870 @@ export default function RightSidebarDock({
         className={`right-sidebar-dock-responsive ${isOpen ? 'open' : ''}`}
       >
         {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* SECTION 1 (STATIC PART): YouTube Impact + Planned Videos Queue */}
+        {/* CASE A: DEDICATED ITEM INSPECTOR (Active when item is selected)  */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <div
-          id="right-dock-static-section"
-          style={{
-            padding: '14px 14px 12px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-            borderBottom: '1px solid rgba(166, 175, 195, 0.35)',
-            flexShrink: 0,
-            background: 'rgba(235, 238, 242, 0.95)',
-            maxHeight: '62vh',
-            overflowY: 'auto'
-          }}
-        >
-          {/* Header & Channel Status Badge */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '6px',
-                  background: 'rgba(255, 0, 0, 0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <PlaySquare size={14} color="#FF0000" />
-              </div>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B', letterSpacing: '-0.01em' }}>
-                YouTube Impact
-              </span>
-            </div>
+        {selectedItem && itemMeta ? (
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+            {/* 1. Header with Breadcrumb Back & Urgent Action */}
+            <div
+              style={{
+                padding: '14px 16px',
+                borderBottom: '1px solid #E2E8F0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#FFFFFF',
+                flexShrink: 0
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={onClearSelectedItem}
+                  id="btn-inspector-back-radar"
+                  title="Return to Channel Radar"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    background: '#F1F5F9',
+                    border: '1px solid #E2E8F0',
+                    color: '#475569',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <ChevronLeft size={13} />
+                  <span>Radar</span>
+                </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '2px 8px',
-                  borderRadius: '9999px',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  background: status?.has_api_key ? 'rgba(13, 148, 136, 0.12)' : 'rgba(234, 88, 12, 0.12)',
-                  color: status?.has_api_key ? '#0D9488' : '#EA580C'
-                }}
-              >
                 <span
                   style={{
-                    width: '5px',
-                    height: '5px',
-                    borderRadius: '50%',
-                    backgroundColor: status?.has_api_key ? '#0D9488' : '#EA580C'
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    padding: '2px 8px',
+                    borderRadius: '9999px',
+                    background: itemMeta.isPlanned ? 'rgba(47, 101, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                    color: itemMeta.isPlanned ? '#2563EB' : '#059669'
                   }}
-                />
-                {status?.has_api_key ? 'Synced' : 'Demo'}
-              </span>
+                >
+                  {itemMeta.isShort ? 'Short' : (itemMeta.isPlanned ? 'Planned' : 'Live Video')}
+                </span>
+              </div>
 
-              {/* Mobile / Tablet Close Button */}
-              {onClose && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {/* Urgent Toggle Button */}
+                {selectedItem.id && (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleUrgent(selectedItem)}
+                    id="btn-inspector-toggle-urgent"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 9px',
+                      borderRadius: '9999px',
+                      border: 'none',
+                      background: itemMeta.isUrgent ? 'rgba(234, 88, 12, 0.15)' : '#F1F5F9',
+                      color: itemMeta.isUrgent ? '#EA580C' : '#64748B',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      transition: 'all 0.15s ease'
+                    }}
+                    title={itemMeta.isUrgent ? "Urgent Priority Active (Click to remove)" : "Click to prioritize as Urgent"}
+                  >
+                    <Flame size={13} fill={itemMeta.isUrgent ? "#EA580C" : "none"} color={itemMeta.isUrgent ? "#EA580C" : "#64748B"} />
+                    <span>{itemMeta.isUrgent ? 'Urgent' : 'Prioritize'}</span>
+                  </button>
+                )}
+
+                {/* Close Drawer Button */}
                 <button
-                  onClick={onClose}
-                  className="xl:hidden"
+                  onClick={() => {
+                    if (onClearSelectedItem) onClearSelectedItem();
+                    if (onClose) onClose();
+                  }}
+                  id="btn-inspector-close"
                   style={{
                     background: 'transparent',
                     border: 'none',
                     color: '#64748B',
-                    padding: '2px 4px',
                     cursor: 'pointer',
+                    padding: '4px',
+                    borderRadius: '6px',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
+                    alignItems: 'center'
                   }}
-                  title="Close Inspector Drawer"
+                  title="Close Inspector"
                 >
                   <X size={16} />
                 </button>
+              </div>
+            </div>
+
+            {/* 2. Scrollable Body */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Title & Metadata Header */}
+              <div style={{ background: '#F8FAFC', borderRadius: '12px', padding: '14px', border: '1px solid #E2E8F0' }}>
+                <h3 style={{ margin: 0, fontSize: '13.5px', fontWeight: 700, color: '#0F172A', lineHeight: 1.45 }}>
+                  {itemMeta.title}
+                </h3>
+
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '10px' }}>
+                  {itemMeta.course && (
+                    <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#1E40AF', background: '#DBEAFE', padding: '2px 8px', borderRadius: '6px' }}>
+                      {itemMeta.course}
+                    </span>
+                  )}
+                  {itemMeta.subject && (
+                    <span style={{ fontSize: '10.5px', fontWeight: 600, color: '#475569', background: '#E2E8F0', padding: '2px 8px', borderRadius: '6px' }}>
+                      {itemMeta.subject}
+                    </span>
+                  )}
+                  {itemMeta.publishYear && (
+                    <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#059669', background: '#DCFCE7', padding: '2px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <Calendar size={11} /> {itemMeta.publishYear}
+                    </span>
+                  )}
+                </div>
+
+                {(selectedItem.session_name || selectedItem.assigned_week) && (
+                  <div style={{ fontSize: '11px', color: '#64748B', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CalendarDays size={13} color="#94A3B8" />
+                    <span>{selectedItem.session_name || 'Standard Session'}</span>
+                    <span>·</span>
+                    <span style={{ fontWeight: 600, color: '#334155' }}>{selectedItem.assigned_week || 'Backlog'}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Status Stepper Workflow (if Planned) */}
+              {itemMeta.isPlanned && (
+                <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Production Workflow
+                    </span>
+                    {localStatus === 'Uploaded' && (
+                      <span style={{ fontSize: '10px', color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                        <CheckCircle2 size={12} /> Live on YouTube
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', background: '#F1F5F9', padding: '3px', borderRadius: '9px' }}>
+                    {['Planned', 'Scheduled', 'Uploaded', 'Review'].map((st) => {
+                      const isActive = (localStatus || '').toLowerCase() === st.toLowerCase();
+                      return (
+                        <button
+                          key={st}
+                          onClick={() => handleStatusToggle(st)}
+                          disabled={isUpdatingStatus}
+                          style={{
+                            padding: '6px 2px',
+                            fontSize: '10px',
+                            fontWeight: isActive ? 700 : 500,
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: isActive ? '#2563EB' : 'transparent',
+                            color: isActive ? '#FFFFFF' : '#64748B',
+                            cursor: isUpdatingStatus ? 'wait' : 'pointer',
+                            transition: 'all 0.15s ease',
+                            textAlign: 'center'
+                          }}
+                        >
+                          {st}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
+
+              {/* Low CTR Intervention Alert Banner */}
+              {itemMeta.isFlaggedCTR && (
+                <div
+                  style={{
+                    background: '#FFF1F2',
+                    border: '1px solid #FECDD3',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#E11D48', fontWeight: 700, fontSize: '12px' }}>
+                    <AlertTriangle size={15} />
+                    <span>Low CTR Alert ({itemMeta.ctr ? `${itemMeta.ctr.toFixed(1)}%` : '< 4.0%'})</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#9F1239', lineHeight: 1.4 }}>
+                    This video is underperforming against the 4.0% benchmark. Improving the thumbnail contrast and title urgency can significantly recover impression velocity.
+                  </p>
+                  {onLogChangeForVideo && (
+                    <button
+                      onClick={() => onLogChangeForVideo(selectedItem)}
+                      style={{
+                        alignSelf: 'flex-start',
+                        padding: '6px 12px',
+                        background: '#E11D48',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                    >
+                      <Sparkles size={12} />
+                      <span>Log Strategy Optimization</span>
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Telemetry Snapshot Cards */}
+              {(itemMeta.views !== null || itemMeta.watchHours !== null || itemMeta.ctr !== null) && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Performance Telemetry
+                  </span>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    {/* Views */}
+                    <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#64748B', fontWeight: 600 }}>
+                        <Eye size={12} color="#2563EB" /> Views
+                      </div>
+                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginTop: '4px', lineHeight: 1 }}>
+                        {formatCompactNum(itemMeta.views)}
+                      </div>
+                    </div>
+
+                    {/* Watch Time */}
+                    <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#64748B', fontWeight: 600 }}>
+                        <Clock size={12} color="#059669" /> Watch Time
+                      </div>
+                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginTop: '4px', lineHeight: 1 }}>
+                        {formatCompactNum(itemMeta.watchHours)}h
+                      </div>
+                    </div>
+
+                    {/* CTR */}
+                    <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#64748B', fontWeight: 600 }}>
+                        <Percent size={12} color={itemMeta.isFlaggedCTR ? "#E11D48" : "#2563EB"} /> CTR
+                      </div>
+                      <div style={{ fontSize: '18px', fontWeight: 800, color: itemMeta.isFlaggedCTR ? "#E11D48" : "#0F172A", marginTop: '4px', lineHeight: 1 }}>
+                        {itemMeta.ctr !== null ? `${itemMeta.ctr.toFixed(1)}%` : '—'}
+                      </div>
+                    </div>
+
+                    {/* Like Ratio */}
+                    <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#64748B', fontWeight: 600 }}>
+                        <ThumbsUp size={12} color="#D97706" /> Likes
+                      </div>
+                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginTop: '4px', lineHeight: 1 }}>
+                        {formatCompactNum(itemMeta.likes)}
+                        {itemMeta.likeRatio !== null && (
+                          <span style={{ fontSize: '10.5px', color: '#059669', fontWeight: 700, marginLeft: '4px' }}>
+                            ({itemMeta.likeRatio}%)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* YouTube Link Integration */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  YouTube Link
+                </span>
+
+                {itemMeta.youtubeUrl ? (
+                  <a
+                    href={itemMeta.youtubeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 14px',
+                      background: '#FFF1F2',
+                      border: '1px solid #FFE4E6',
+                      borderRadius: '10px',
+                      textDecoration: 'none',
+                      color: '#E11D48',
+                      fontWeight: 700,
+                      fontSize: '12px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <PlaySquare size={16} color="#FF0000" />
+                      <span>Watch Video on YouTube</span>
+                    </div>
+                    <ExternalLink size={14} />
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => onOpenLinkModal && onOpenLinkModal(selectedItem)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '10px',
+                      background: '#F1F5F9',
+                      border: '1px dashed #CBD5E1',
+                      borderRadius: '10px',
+                      color: '#475569',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Link2 size={14} />
+                    <span>Link with YouTube Video</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Contextual Action Utilities */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: 'auto' }}>
+                <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Quick Actions
+                </span>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {onLogChangeForVideo && !itemMeta.isFlaggedCTR && (
+                    <button
+                      onClick={() => onLogChangeForVideo(selectedItem)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '9px 12px',
+                        background: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '8px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        color: '#334155',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Sparkles size={13} color="#2563EB" />
+                      <span>Log Strategy / Thumbnail Change</span>
+                    </button>
+                  )}
+
+                  {onEditCategoryForVideo && (
+                    <button
+                      onClick={() => onEditCategoryForVideo(selectedItem)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '9px 12px',
+                        background: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '8px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        color: '#334155',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Tag size={13} color="#059669" />
+                      <span>Edit Course & Topic Classification</span>
+                    </button>
+                  )}
+
+                  {onEditListsForVideo && (
+                    <button
+                      onClick={() => onEditListsForVideo(selectedItem)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '9px 12px',
+                        background: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '8px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        color: '#334155',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Layers size={13} color="#7C3AED" />
+                      <span>Manage Custom Video Lists</span>
+                    </button>
+                  )}
+
+                  {/* Delete Planned Video */}
+                  {itemMeta.isPlanned && selectedItem.id && (
+                    <button
+                      type="button"
+                      onClick={handleDeleteItem}
+                      disabled={isDeletingItem}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        padding: '8px 12px',
+                        background: '#FFF1F2',
+                        border: '1px solid #FECDD3',
+                        borderRadius: '8px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: '#E11D48',
+                        cursor: isDeletingItem ? 'not-allowed' : 'pointer',
+                        marginTop: '4px'
+                      }}
+                    >
+                      <Trash2 size={13} />
+                      <span>{isDeletingItem ? 'Deleting...' : 'Delete Planned Video'}</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-
-        {/* 1. YouTube Impact Card */}
-        <div
-          className="soft-raised"
-          style={{
-            padding: '12px 14px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px',
-            borderRadius: '16px',
-            background: '#F0F3F7',
-            border: '1px solid rgba(255, 255, 255, 0.85)',
-            boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.85)'
-          }}
-        >
-          {/* Subtitle & Upload count */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 600 }}>
-              Uploaded Planned Videos
-            </span>
-            <span
-              style={{
-                fontSize: '10px',
-                padding: '2px 7px',
-                borderRadius: '6px',
-                background: '#E6EAF0',
-                color: '#475569',
-                fontWeight: 700
-              }}
-            >
-              {youtubeStats?.uploaded_count || uploadedCount} uploaded
-            </span>
-          </div>
-
-          {/* 2x2 Impact Metrics Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            {/* Views */}
-            <div
-              className="soft-inset"
-              style={{
-                padding: '8px 10px',
-                borderRadius: '10px',
-                background: '#E6EAF0',
-                boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85)'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9.5px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
-                <Eye size={11} color="#2F65F6" />
-                <span>Views</span>
-              </div>
-              <div style={{ fontSize: '17px', fontWeight: 800, color: '#2F65F6', lineHeight: 1, marginTop: '4px' }}>
-                {formatCompactNum(youtubeStats?.total_views || 0)}
-              </div>
-            </div>
-
-            {/* Watch Time */}
-            <div
-              className="soft-inset"
-              style={{
-                padding: '8px 10px',
-                borderRadius: '10px',
-                background: '#E6EAF0',
-                boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85)'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9.5px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
-                <Clock size={11} color="#10B981" />
-                <span>Watch Time</span>
-              </div>
-              <div style={{ fontSize: '17px', fontWeight: 800, color: '#10B981', lineHeight: 1, marginTop: '4px' }}>
-                {formatCompactNum(youtubeStats?.total_watch_time_hours || 0)}h
-              </div>
-            </div>
-
-            {/* Likes */}
-            <div
-              className="soft-inset"
-              style={{
-                padding: '8px 10px',
-                borderRadius: '10px',
-                background: '#E6EAF0',
-                boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85)'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9.5px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
-                <ThumbsUp size={11} color="#F59E0B" />
-                <span>Likes</span>
-              </div>
-              <div style={{ fontSize: '17px', fontWeight: 800, color: '#1E293B', lineHeight: 1, marginTop: '4px' }}>
-                {formatCompactNum(youtubeStats?.total_likes || 0)}
-              </div>
-            </div>
-
-            {/* Comments */}
-            <div
-              className="soft-inset"
-              style={{
-                padding: '8px 10px',
-                borderRadius: '10px',
-                background: '#E6EAF0',
-                boxShadow: 'inset 2px 2px 4px rgba(166, 175, 195, 0.45), inset -2px -2px 4px rgba(255, 255, 255, 0.85)'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9.5px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
-                <MessageSquare size={11} color="#8B5CF6" />
-                <span>Comments</span>
-              </div>
-              <div style={{ fontSize: '17px', fontWeight: 800, color: '#1E293B', lineHeight: 1, marginTop: '4px' }}>
-                {(youtubeStats?.total_comments || 0).toLocaleString()}
-              </div>
-            </div>
-          </div>
-
-          {/* Top Video Snippet (if available) */}
-          {youtubeStats?.top_videos?.length > 0 && (
+        ) : (
+          /* ═══════════════════════════════════════════════════════════════ */
+          /* CASE B: CHANNEL ACTION RADAR & INTEL HUB (When no item selected) */
+          /* ═══════════════════════════════════════════════════════════════ */
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+            {/* 1. Brand Header & Collapse */}
             <div
               style={{
-                fontSize: '10.5px',
-                color: '#64748B',
-                borderTop: '1px solid rgba(166, 175, 195, 0.3)',
-                paddingTop: '6px',
+                padding: '14px 16px',
+                borderBottom: '1px solid #E2E8F0',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                gap: '6px'
+                background: '#FFFFFF',
+                flexShrink: 0
               }}
             >
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                Top: <strong style={{ color: '#1E293B' }}>{youtubeStats.top_videos[0].title}</strong>
-              </span>
-              <span style={{ color: '#2F65F6', fontWeight: 700, flexShrink: 0 }}>
-                {youtubeStats.top_videos[0].views.toLocaleString()} v
-              </span>
-            </div>
-          )}
-
-          {/* Unlinked Notice */}
-          {uploadedCount > (youtubeStats?.uploaded_count || 0) && (
-            <div
-              style={{
-                padding: '6px 8px',
-                background: 'rgba(234, 88, 12, 0.1)',
-                border: '1px solid rgba(234, 88, 12, 0.25)',
-                borderRadius: '8px',
-                fontSize: '10px',
-                color: '#EA580C',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px'
-              }}
-            >
-              <AlertTriangle size={12} style={{ flexShrink: 0 }} />
-              <span>
-                {uploadedCount - (youtubeStats?.uploaded_count || 0)} uploads awaiting YouTube confirmation
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* 2. Static Card: Planned Videos (Fix 1: Urgent Priority + Upcoming Week 4 Videos) */}
-        <div
-          className="soft-raised"
-          style={{
-            padding: '12px 14px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px',
-            borderRadius: '16px',
-            background: '#F0F3F7',
-            border: '1px solid rgba(255, 255, 255, 0.85)',
-            boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.85)'
-          }}
-        >
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div
-                style={{
-                  width: '22px',
-                  height: '22px',
-                  borderRadius: '6px',
-                  background: 'rgba(234, 88, 12, 0.12)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <Flame size={13} color="#EA580C" />
-              </div>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: '#1E293B', letterSpacing: '-0.01em' }}>
-                Planned Queue
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {urgentVideos.length > 0 && (
-                <span
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
                   style={{
-                    fontSize: '9.5px',
-                    padding: '2px 7px',
-                    borderRadius: '9999px',
-                    background: 'rgba(234, 88, 12, 0.15)',
-                    color: '#EA580C',
-                    fontWeight: 700,
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '3px'
+                    justifyContent: 'center',
+                    color: '#FFFFFF'
                   }}
                 >
-                  <Flame size={10} fill="#EA580C" /> {urgentVideos.length} Urgent
+                  <Sparkles size={15} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', lineHeight: 1.2 }}>
+                    Channel Radar
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#64748B' }}>
+                    Falcon Intelligence Hub
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '2px 8px',
+                    borderRadius: '9999px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    background: status?.has_api_key ? 'rgba(16, 185, 129, 0.12)' : 'rgba(234, 88, 12, 0.12)',
+                    color: status?.has_api_key ? '#059669' : '#EA580C'
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '5px',
+                      height: '5px',
+                      borderRadius: '50%',
+                      backgroundColor: status?.has_api_key ? '#059669' : '#EA580C'
+                    }}
+                  />
+                  {status?.has_api_key ? 'Live' : 'Demo'}
                 </span>
-              )}
-              <span
-                style={{
-                  fontSize: '9.5px',
-                  padding: '2px 6px',
-                  borderRadius: '6px',
-                  background: '#E6EAF0',
-                  color: '#64748B',
-                  fontWeight: 600
-                }}
-              >
-                {plannedVideos.filter(v => v.status !== 'Uploaded').length} queue
-              </span>
+
+                {/* Close Button */}
+                {onClose && (
+                  <button
+                    onClick={onClose}
+                    id="btn-radar-close-dock"
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#64748B',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      borderRadius: '6px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    title="Collapse Panel"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Sub-Section A: Urgent Videos (Fix 1 & Fix 2) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
-              <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#EA580C', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Flame size={11} fill="#EA580C" /> Urgent Priority
-              </span>
+            {/* 2. Mode Segmented Switcher */}
+            <div style={{ padding: '10px 16px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', flexShrink: 0 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#E2E8F0', padding: '3px', borderRadius: '8px' }}>
+                <button
+                  onClick={() => setHubTab('radar')}
+                  id="tab-radar-action"
+                  style={{
+                    padding: '6px 8px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    fontSize: '11px',
+                    fontWeight: hubTab === 'radar' ? 700 : 500,
+                    background: hubTab === 'radar' ? '#FFFFFF' : 'transparent',
+                    color: hubTab === 'radar' ? '#0F172A' : '#64748B',
+                    boxShadow: hubTab === 'radar' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '5px'
+                  }}
+                >
+                  <Flame size={12} color={hubTab === 'radar' ? '#EA580C' : '#64748B'} />
+                  <span>Action Radar</span>
+                  {urgentVideos.length > 0 && (
+                    <span style={{ fontSize: '9px', padding: '0 5px', borderRadius: '9999px', background: '#EA580C', color: '#FFF', fontWeight: 800 }}>
+                      {urgentVideos.length}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => setHubTab('pulse')}
+                  id="tab-radar-pulse"
+                  style={{
+                    padding: '6px 8px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    fontSize: '11px',
+                    fontWeight: hubTab === 'pulse' ? 700 : 500,
+                    background: hubTab === 'pulse' ? '#FFFFFF' : 'transparent',
+                    color: hubTab === 'pulse' ? '#0F172A' : '#64748B',
+                    boxShadow: hubTab === 'pulse' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '5px'
+                  }}
+                >
+                  <BarChart3 size={12} color={hubTab === 'pulse' ? '#2563EB' : '#64748B'} />
+                  <span>Channel Pulse</span>
+                </button>
+              </div>
             </div>
 
-            {urgentVideos.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                {urgentVideos.map((v) => {
-                  const isSelected = selectedItem?.id === v.id;
-                  const track = getVideoTrackInfo(v);
-                  return (
-                    <div
-                      key={v.id}
-                      onClick={() => onSelectItem && onSelectItem(v)}
-                      className="soft-inset"
-                      style={{
-                        padding: '6px 8px',
-                        borderRadius: '9px',
-                        background: isSelected ? 'rgba(234, 88, 12, 0.12)' : '#E6EAF0',
-                        border: isSelected ? '1px solid rgba(234, 88, 12, 0.4)' : 'none',
-                        borderLeft: track.isCFA ? '3px solid #16A34A' : (track.isFRM ? '3px solid #2563EB' : 'none'),
-                        boxShadow: 'inset 1.5px 1.5px 3px rgba(166, 175, 195, 0.45), inset -1.5px -1.5px 3px rgba(255, 255, 255, 0.85)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      {/* Urgency Toggle Button (Fix 2) */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleUrgent(v);
-                        }}
-                        title="Urgent Priority (Click to unmark)"
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          padding: '2px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#EA580C',
-                          flexShrink: 0
-                        }}
-                      >
-                        <Flame size={14} fill="#EA580C" color="#EA580C" />
-                      </button>
+            {/* 3. Tab Contents */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {hubTab === 'radar' ? (
+                <>
+                  {/* Section A: Urgent Pipeline */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#EA580C', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Flame size={13} fill="#EA580C" /> Urgent Pipeline ({urgentVideos.length})
+                      </span>
+                    </div>
 
-                      {/* Video Title & Meta */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {v.title}
-                        </div>
-                        <div style={{ fontSize: '9px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
-                          <span>{v.assigned_week || v.session_name || 'Immediate'}</span>
-                          {track.levelCode && (
-                            <span style={{
-                              background: track.isCFA ? '#DCFCE7' : (track.isFRM ? '#DBEAFE' : '#F1F5F9'),
-                              color: track.isCFA ? '#15803D' : (track.isFRM ? '#1D4ED8' : '#475569'),
-                              padding: '0.5px 4px',
-                              borderRadius: '3px',
-                              fontWeight: 800,
-                              fontSize: '8px'
-                            }} title={track.courseFullName || (track.isCFA ? `CFA Level ${track.levelCode}` : `FRM Part ${track.levelCode}`)}>
-                              {track.levelCode}
-                            </span>
-                          )}
-                          {track.subjectCode && (
-                            <span style={{
-                              background: track.isCFA ? '#F0FDF4' : (track.isFRM ? '#EFF6FF' : '#F8FAFC'),
-                              color: track.isCFA ? '#166534' : (track.isFRM ? '#1E40AF' : '#64748B'),
-                              padding: '0.5px 4px',
-                              borderRadius: '3px',
-                              fontWeight: 700,
-                              fontSize: '8px'
-                            }} title={track.subjectFullName}>
-                              {track.subjectCode}
-                            </span>
-                          )}
-                        </div>
+                    {urgentVideos.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {urgentVideos.map((v) => (
+                          <div
+                            key={v.id}
+                            onClick={() => onSelectItem && onSelectItem(v)}
+                            style={{
+                              background: '#FFF7ED',
+                              border: '1px solid #FFEDD5',
+                              borderRadius: '10px',
+                              padding: '10px 12px',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '12px', fontWeight: 700, color: '#9A3412', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {v.title}
+                                </div>
+                                <div style={{ fontSize: '10px', color: '#C2410C', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span>{v.assigned_week || 'Immediate'}</span>
+                                  {v.course_name && (
+                                    <span style={{ background: '#FED7AA', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                                      {v.course_name}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <ChevronRight size={14} color="#EA580C" style={{ flexShrink: 0, marginTop: '2px' }} />
+                            </div>
+                          </div>
+                        ))}
                       </div>
+                    ) : (
+                      <div style={{ background: '#F8FAFC', border: '1px dashed #E2E8F0', borderRadius: '10px', padding: '12px', textAlign: 'center', fontSize: '11px', color: '#64748B' }}>
+                        No urgent videos pending. All exam milestone content is on schedule.
+                      </div>
+                    )}
+                  </div>
 
-                      {/* Status Pill (only show non-planned status, e.g. Scheduled) */}
-                      {v.status && v.status !== 'Planned' && (
-                        <span
-                          style={{
-                            fontSize: '8.5px',
-                            fontWeight: 700,
-                            padding: '1px 5px',
-                            borderRadius: '4px',
-                            background: v.status === 'Scheduled' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(234, 88, 12, 0.15)',
-                            color: v.status === 'Scheduled' ? '#2563EB' : '#EA580C',
-                            flexShrink: 0
-                          }}
+                  {/* Section B: CTR Interventions */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#E11D48', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <AlertTriangle size={13} /> CTR Triage Alerts
+                      </span>
+                      {onNavigateTab && (
+                        <button
+                          onClick={() => onNavigateTab('low-ctr')}
+                          style={{ background: 'transparent', border: 'none', color: '#E11D48', fontSize: '10.5px', fontWeight: 600, cursor: 'pointer' }}
                         >
-                          {v.status}
-                        </span>
+                          View all →
+                        </button>
                       )}
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div style={{ fontSize: '10px', color: '#94A3B8', padding: '6px 8px', background: '#E6EAF0', borderRadius: '8px', textAlign: 'center' }}>
-                No urgent videos. Click 🔥 on any video to prioritize.
-              </div>
-            )}
-          </div>
 
-          {/* Sub-Section B: Planned for Upcoming Week (4 Videos) (Fix 1) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 2px' }}>
-              <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Clock size={11} color="#64748B" /> Upcoming Week ({upcomingWeekVideos.length})
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              {upcomingWeekVideos.length > 0 ? (
-                upcomingWeekVideos.map((v) => {
-                  const isSelected = selectedItem?.id === v.id;
-                  const track = getVideoTrackInfo(v);
-                  return (
-                    <div
-                      key={v.id}
-                      onClick={() => onSelectItem && onSelectItem(v)}
-                      className="soft-inset"
-                      style={{
-                        padding: '6px 8px',
-                        borderRadius: '9px',
-                        background: isSelected ? 'rgba(47, 101, 246, 0.1)' : '#E6EAF0',
-                        border: isSelected ? '1px solid rgba(47, 101, 246, 0.3)' : 'none',
-                        borderLeft: track.isCFA ? '3px solid #16A34A' : (track.isFRM ? '3px solid #2563EB' : 'none'),
-                        boxShadow: 'inset 1.5px 1.5px 3px rgba(166, 175, 195, 0.45), inset -1.5px -1.5px 3px rgba(255, 255, 255, 0.85)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      {/* Urgency Toggle Button (Fix 2) */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleUrgent(v);
-                        }}
-                        title="Click to mark as Urgent"
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          padding: '2px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#94A3B8',
-                          flexShrink: 0
-                        }}
-                      >
-                        <Flame size={14} color="#94A3B8" />
-                      </button>
-
-                      {/* Video Title & Meta */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {v.title}
-                        </div>
-                        <div style={{ fontSize: '9px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
-                          <span>{v.assigned_week || 'Upcoming'}</span>
-                          {track.levelCode && (
-                            <span style={{
-                              background: track.isCFA ? '#DCFCE7' : (track.isFRM ? '#DBEAFE' : '#F1F5F9'),
-                              color: track.isCFA ? '#15803D' : (track.isFRM ? '#1D4ED8' : '#475569'),
-                              padding: '0.5px 4px',
-                              borderRadius: '3px',
-                              fontWeight: 800,
-                              fontSize: '8px'
-                            }} title={track.courseFullName || (track.isCFA ? `CFA Level ${track.levelCode}` : `FRM Part ${track.levelCode}`)}>
-                              {track.levelCode}
+                    {lowCtrVideos.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {lowCtrVideos.map((v) => (
+                          <div
+                            key={v.id}
+                            onClick={() => onSelectItem && onSelectItem(v)}
+                            style={{
+                              background: '#FFF1F2',
+                              border: '1px solid #FFE4E6',
+                              borderRadius: '10px',
+                              padding: '10px 12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '8px'
+                            }}
+                          >
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#9F1239', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {v.title}
+                              </div>
+                              <div style={{ fontSize: '10px', color: '#E11D48', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                                <span>{v.ctr ? `${v.ctr.toFixed(1)}% CTR` : '< 4% CTR'}</span>
+                                {v.views && <span>· {formatCompactNum(v.views)} views</span>}
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '10px', fontWeight: 700, background: '#E11D48', color: '#FFF', padding: '2px 7px', borderRadius: '6px', flexShrink: 0 }}>
+                              Inspect
                             </span>
-                          )}
-                          {track.subjectCode && (
-                            <span style={{
-                              background: track.isCFA ? '#F0FDF4' : (track.isFRM ? '#EFF6FF' : '#F8FAFC'),
-                              color: track.isCFA ? '#166534' : (track.isFRM ? '#1E40AF' : '#64748B'),
-                              padding: '0.5px 4px',
-                              borderRadius: '3px',
-                              fontWeight: 700,
-                              fontSize: '8px'
-                            }} title={track.subjectFullName}>
-                              {track.subjectCode}
-                            </span>
-                          )}
-                        </div>
+                          </div>
+                        ))}
                       </div>
+                    ) : (
+                      <div style={{ background: '#F8FAFC', border: '1px dashed #E2E8F0', borderRadius: '10px', padding: '12px', textAlign: 'center', fontSize: '11px', color: '#64748B' }}>
+                        All tracked videos meet or exceed CTR benchmarks.
+                      </div>
+                    )}
+                  </div>
 
-                      {/* Status Pill (only show non-planned status, e.g. Scheduled) */}
-                      {v.status && v.status !== 'Planned' && (
-                        <span
-                          style={{
-                            fontSize: '8.5px',
-                            fontWeight: 600,
-                            padding: '1px 5px',
-                            borderRadius: '4px',
-                            background: v.status === 'Scheduled' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(100, 116, 139, 0.15)',
-                            color: v.status === 'Scheduled' ? '#2563EB' : '#475569',
-                            flexShrink: 0
-                          }}
-                        >
-                          {v.status}
-                        </span>
-                      )}
+                  {/* Section C: Upcoming Week Queue */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Clock size={13} color="#64748B" /> Upcoming Week ({upcomingWeekVideos.length})
+                      </span>
                     </div>
-                  );
-                })
+
+                    {upcomingWeekVideos.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {upcomingWeekVideos.map((v) => (
+                          <div
+                            key={v.id}
+                            onClick={() => onSelectItem && onSelectItem(v)}
+                            style={{
+                              background: '#F8FAFC',
+                              border: '1px solid #E2E8F0',
+                              borderRadius: '10px',
+                              padding: '8px 12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '6px'
+                            }}
+                          >
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: '11.5px', fontWeight: 600, color: '#1E293B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {v.title}
+                              </div>
+                              <div style={{ fontSize: '9.5px', color: '#64748B', marginTop: '2px' }}>
+                                {v.assigned_week || 'Upcoming'} · {v.course_name || 'Course'}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleUrgent(v);
+                              }}
+                              title="Mark as Urgent"
+                              style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', color: '#94A3B8' }}
+                            >
+                              <Flame size={13} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ background: '#F8FAFC', border: '1px dashed #E2E8F0', borderRadius: '10px', padding: '12px', textAlign: 'center', fontSize: '11px', color: '#64748B' }}>
+                        No videos queued for the upcoming week.
+                      </div>
+                    )}
+                  </div>
+                </>
               ) : (
-                <div style={{ fontSize: '10px', color: '#94A3B8', padding: '6px 8px', background: '#E6EAF0', borderRadius: '8px', textAlign: 'center' }}>
-                  No upcoming planned videos in queue.
-                </div>
+                /* Tab B: Channel Pulse */
+                <>
+                  {/* Channel Connection Box */}
+                  <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>
+                          {status?.channel_name || 'Falcon Edufin'}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                          {(status?.summary?.total_videos || 188).toLocaleString()} published videos
+                        </div>
+                      </div>
+
+                      {onSyncChannel && (
+                        <button
+                          onClick={onSyncChannel}
+                          disabled={isSyncing}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            background: '#2563EB',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            cursor: isSyncing ? 'wait' : 'pointer'
+                          }}
+                        >
+                          <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
+                          <span>{isSyncing ? 'Syncing...' : 'Sync Now'}</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div style={{ fontSize: '10px', color: '#94A3B8', borderTop: '1px solid #E2E8F0', paddingTop: '8px' }}>
+                      Last synchronized {formatSyncTime(status?.last_youtube_sync)}
+                    </div>
+                  </div>
+
+                  {/* Exam Target Countdowns */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Active Exam Windows
+                    </span>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ background: '#F0FDF4', border: '1px solid #DCFCE7', borderRadius: '10px', padding: '10px 12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#166534' }}>CFA May Window</span>
+                          <span style={{ fontSize: '10px', fontWeight: 800, color: '#15803D', background: '#DCFCE7', padding: '2px 6px', borderRadius: '9999px' }}>
+                            On Track
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#15803D', marginTop: '4px' }}>
+                          Lectures on pace · Formula revision prioritized
+                        </div>
+                      </div>
+
+                      <div style={{ background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: '10px', padding: '10px 12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#1E40AF' }}>FRM May Window</span>
+                          <span style={{ fontSize: '10px', fontWeight: 800, color: '#2563EB', background: '#DBEAFE', padding: '2px 6px', borderRadius: '9999px' }}>
+                            Active Pacing
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#1D4ED8', marginTop: '4px' }}>
+                          Target: 4 key readings before marathon session
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* YouTube Impact Totals */}
+                  {youtubeStats && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        Upload Plan Impact
+                      </span>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '10px' }}>
+                          <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>Plan Views</div>
+                          <div style={{ fontSize: '16px', fontWeight: 800, color: '#2563EB', marginTop: '4px' }}>
+                            {formatCompactNum(youtubeStats.total_views)}
+                          </div>
+                        </div>
+
+                        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '10px' }}>
+                          <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>Watch Hours</div>
+                          <div style={{ fontSize: '16px', fontWeight: 800, color: '#059669', marginTop: '4px' }}>
+                            {formatCompactNum(youtubeStats.total_watch_time_hours)}h
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
-          </div>
-        </div>
-
-        {/* Channel Metadata Row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', fontSize: '10.5px', color: '#64748B' }}>
-          <span>{status?.channel_name || 'Falcon Edufin'} · {(status?.summary?.total_videos || 188).toLocaleString()} videos</span>
-          <span>Synced {formatSyncTime(status?.last_youtube_sync)}</span>
-        </div>
-      </div>
-
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* SECTION 2 (DYNAMIC AREA): Directly Below the Static Area        */}
-      {/* ═══════════════════════════════════════════════════════════════ */}
-      <div
-        id="right-dock-dynamic-section"
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '14px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          boxSizing: 'border-box'
-        }}
-      >
-        {/* Contextual Section Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {selectedItem ? (
-              <>
-                <FileText size={13} color="#2F65F6" />
-                <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#475569' }}>
-                  Item Inspector
-                </span>
-              </>
-            ) : (
-              <>
-                {activeTab === 'syllabus' && <BookOpen size={13} color="#7C3AED" />}
-                {activeTab === 'planner' && <CalendarDays size={13} color="#2F65F6" />}
-                {activeTab === 'shorts' && <Zap size={13} color="#EA580C" />}
-                {activeTab === 'manage' && <SlidersHorizontal size={13} color="#7C3AED" />}
-                {activeTab === 'overview' && <LayoutDashboard size={13} color="#2F65F6" />}
-                {activeTab === 'leaderboard' && <BarChart3 size={13} color="#10B981" />}
-                {activeTab === 'low-ctr' && <AlertCircle size={13} color="#EF4444" />}
-                {activeTab === 'competitors' && <Users2 size={13} color="#6366F1" />}
-                <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#475569' }}>
-                  {activeTab === 'syllabus' && 'Syllabus Matcher'}
-                  {activeTab === 'planner' && 'Upload Planner'}
-                  {activeTab === 'shorts' && 'Shorts Pipeline'}
-                  {activeTab === 'manage' && 'Plan Management'}
-                  {activeTab === 'overview' && 'Channel Overview'}
-                  {activeTab === 'leaderboard' && 'Leaderboard'}
-                  {activeTab === 'low-ctr' && 'CTR Triage'}
-                  {activeTab === 'competitors' && 'Competitor Intel'}
-                </span>
-              </>
-            )}
-          </div>
-          {selectedItem && (
-            <button
-              onClick={onClearSelectedItem}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#94A3B8',
-                cursor: 'pointer',
-                padding: '2px',
-                borderRadius: '4px',
-                display: 'flex',
-                alignItems: 'center'
-              }}
-              title="Close item inspector"
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
-
-        {selectedItem ? (
-          /* Populated Contextual Item Inspector */
-          <div
-            className="soft-raised"
-            style={{
-              padding: '14px',
-              borderRadius: '16px',
-              background: '#F0F3F7',
-              border: '1px solid rgba(255, 255, 255, 0.85)',
-              boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.85)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px'
-            }}
-          >
-            {/* Header Badge & Urgent Button */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span
-                style={{
-                  fontSize: '9.5px',
-                  fontWeight: 700,
-                  letterSpacing: '0.06em',
-                  padding: '2px 8px',
-                  borderRadius: '9999px',
-                  background: 'rgba(47, 101, 246, 0.1)',
-                  color: '#2F65F6',
-                  textTransform: 'uppercase'
-                }}
-              >
-                {selectedItem.item_type || (selectedItem.formats ? 'Syllabus Topic' : 'Planned Video')}
-              </span>
-
-              {/* Urgency Toggle Button in Inspector */}
-              <button
-                type="button"
-                onClick={() => handleToggleUrgent(selectedItem)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '3px 8px',
-                  borderRadius: '9999px',
-                  border: 'none',
-                  background: selectedItem.is_urgent ? 'rgba(234, 88, 12, 0.15)' : '#E6EAF0',
-                  color: selectedItem.is_urgent ? '#EA580C' : '#64748B',
-                  cursor: 'pointer',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  transition: 'all 0.15s ease'
-                }}
-                title={selectedItem.is_urgent ? "Marked as Urgent priority (Click to unmark)" : "Click to mark as Urgent"}
-              >
-                <Flame size={12} fill={selectedItem.is_urgent ? "#EA580C" : "none"} color={selectedItem.is_urgent ? "#EA580C" : "#64748B"} />
-                <span>{selectedItem.is_urgent ? 'Urgent' : 'Mark Urgent'}</span>
-              </button>
-            </div>
-
-            {/* Title */}
-            <div>
-              <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#1E293B', lineHeight: 1.35 }}>
-                {selectedItem.title || selectedItem.name || 'Untitled Entry'}
-              </h4>
-              {(selectedItem.session_name || selectedItem.assigned_week) && (
-                <span style={{ fontSize: '10.5px', color: '#64748B', display: 'block', marginTop: '2px' }}>
-                  {selectedItem.session_name || 'Evergreen'} · {selectedItem.assigned_week || 'Backlog'}
-                </span>
-              )}
-            </div>
-
-            {/* Tags */}
-            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-              {selectedItem.course_name && (
-                <span
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    padding: '2px 6px',
-                    borderRadius: '6px',
-                    background: '#E6EAF0',
-                    color: '#475569'
-                  }}
-                >
-                  {selectedItem.course_name}
-                </span>
-              )}
-              {selectedItem.subject_name && (
-                <span
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    padding: '2px 6px',
-                    borderRadius: '6px',
-                    background: '#E6EAF0',
-                    color: '#475569'
-                  }}
-                >
-                  {selectedItem.subject_name}
-                </span>
-              )}
-            </div>
-
-            {/* Status Segmented Toggle */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <span style={{ fontSize: '10px', fontWeight: 600, color: '#64748B', textTransform: 'uppercase' }}>
-                Status
-              </span>
-              <div
-                className="soft-inset"
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
-                  gap: '3px',
-                  padding: '3px',
-                  borderRadius: '10px',
-                  background: '#E6EAF0'
-                }}
-              >
-                {['Planned', 'Scheduled', 'Uploaded', 'Review'].map((st) => {
-                  const isActive = (localStatus || '').toLowerCase() === st.toLowerCase();
-                  return (
-                    <button
-                      key={st}
-                      onClick={() => handleStatusToggle(st)}
-                      disabled={isUpdatingStatus}
-                      style={{
-                        padding: '5px 2px',
-                        fontSize: '9.5px',
-                        fontWeight: isActive ? 700 : 500,
-                        borderRadius: '7px',
-                        border: 'none',
-                        background: isActive ? '#2F65F6' : 'transparent',
-                        color: isActive ? '#FFFFFF' : '#64748B',
-                        cursor: isUpdatingStatus ? 'wait' : 'pointer',
-                        transition: 'all 0.15s ease',
-                        textAlign: 'center'
-                      }}
-                    >
-                      {st}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* YouTube Link */}
-            {selectedItem.youtube_url ? (
-              <a
-                href={selectedItem.youtube_url}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: '#2F65F6',
-                  textDecoration: 'none',
-                  padding: '6px 10px',
-                  background: 'rgba(47, 101, 246, 0.08)',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(47, 101, 246, 0.2)'
-                }}
-              >
-                <ExternalLink size={12} />
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  Watch on YouTube
-                </span>
-              </a>
-            ) : (
-              <button
-                onClick={() => onOpenLinkModal && onOpenLinkModal(selectedItem)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: '#475569',
-                  padding: '6px 10px',
-                  background: '#E6EAF0',
-                  borderRadius: '8px',
-                  border: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                <Link2 size={12} />
-                <span>Link to YouTube Video</span>
-              </button>
-            )}
-
-            {/* Delete Option for Planned Video in Inspector */}
-            {selectedItem.id && (
-              <button
-                type="button"
-                onClick={handleDeleteItem}
-                disabled={isDeletingItem}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: '#EF4444',
-                  padding: '7px 10px',
-                  background: 'rgba(239, 68, 68, 0.08)',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(239, 68, 68, 0.2)',
-                  cursor: isDeletingItem ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.15s ease',
-                  marginTop: '4px'
-                }}
-                title="Permanently delete this planned video"
-              >
-                <Trash2 size={12} />
-                <span>{isDeletingItem ? 'Deleting...' : 'Delete Planned Video'}</span>
-              </button>
-            )}
-          </div>
-        ) : (
-          /* Page-Specific Contextual Card (Fix 1) */
-          <div
-            className="soft-raised"
-            style={{
-              padding: '14px',
-              borderRadius: '16px',
-              background: '#F0F3F7',
-              border: '1px solid rgba(255, 255, 255, 0.85)',
-              boxShadow: '4px 4px 10px rgba(166, 175, 195, 0.4), -4px -4px 10px rgba(255, 255, 255, 0.85)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px'
-            }}
-          >
-            {activeTab === 'syllabus' && (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>Curriculum Coverage</span>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#7C3AED', background: 'rgba(124, 58, 237, 0.1)', padding: '2px 7px', borderRadius: '9999px' }}>
-                    Matrix Mode
-                  </span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Formats</div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#7C3AED', marginTop: '2px' }}>4 Types</div>
-                  </div>
-                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Coverage</div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#10B981', marginTop: '2px' }}>Active</div>
-                  </div>
-                </div>
-                <div style={{ fontSize: '10px', color: '#64748B', lineHeight: 1.35, borderTop: '1px solid rgba(166, 175, 195, 0.25)', paddingTop: '8px' }}>
-                  Click any reading cell in the matrix to view linked YouTube videos or plan missing formats.
-                </div>
-              </>
-            )}
-
-            {activeTab === 'planner' && (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>Upload Milestones</span>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#2F65F6', background: 'rgba(47, 101, 246, 0.1)', padding: '2px 7px', borderRadius: '9999px' }}>
-                    Pacing OK
-                  </span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Cadence</div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#2F65F6', marginTop: '2px' }}>Weekly</div>
-                  </div>
-                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Target Mode</div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#059669', marginTop: '2px' }}>Exam Run</div>
-                  </div>
-                </div>
-                <div style={{ fontSize: '10px', color: '#64748B', lineHeight: 1.35, borderTop: '1px solid rgba(166, 175, 195, 0.25)', paddingTop: '8px' }}>
-                  Click any planned video in Full Video List or Weekly Schedule to inspect details or assign YouTube links.
-                </div>
-              </>
-            )}
-
-            {activeTab === 'shorts' && (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>Shorts Pipeline</span>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#EA580C', background: 'rgba(234, 88, 12, 0.1)', padding: '2px 7px', borderRadius: '9999px' }}>
-                    60s Bites
-                  </span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Focus</div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#EA580C', marginTop: '2px' }}>TI BA II+</div>
-                  </div>
-                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Series</div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#475569', marginTop: '2px' }}>Hacks</div>
-                  </div>
-                </div>
-                <div style={{ fontSize: '10px', color: '#64748B', lineHeight: 1.35, borderTop: '1px solid rgba(166, 175, 195, 0.25)', paddingTop: '8px' }}>
-                  Vertical shorts under 60 seconds with formula and calculator hacks drive top subscriber discovery.
-                </div>
-              </>
-            )}
-
-            {activeTab === 'manage' && (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>Curriculum Setup</span>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#7C3AED', background: 'rgba(124, 58, 237, 0.1)', padding: '2px 7px', borderRadius: '9999px' }}>
-                    Structure
-                  </span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Tracks</div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#7C3AED', marginTop: '2px' }}>CFA & FRM</div>
-                  </div>
-                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Windows</div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#10B981', marginTop: '2px' }}>Active</div>
-                  </div>
-                </div>
-                <div style={{ fontSize: '10px', color: '#64748B', lineHeight: 1.35, borderTop: '1px solid rgba(166, 175, 195, 0.25)', paddingTop: '8px' }}>
-                  Configure course subjects, set exam session targets, and reconcile automatic video matches.
-                </div>
-              </>
-            )}
-
-            {activeTab === 'overview' && (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>Channel Health</span>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#10B981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 7px', borderRadius: '9999px' }}>
-                    Healthy
-                  </span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Retention</div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#2F65F6', marginTop: '2px' }}>Strong</div>
-                  </div>
-                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>YoY Trend</div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#10B981', marginTop: '2px' }}>Positive</div>
-                  </div>
-                </div>
-                <div style={{ fontSize: '10px', color: '#64748B', lineHeight: 1.35, borderTop: '1px solid rgba(166, 175, 195, 0.25)', paddingTop: '8px' }}>
-                  Click any course performance block in the overview to drill into subject-level telemetry.
-                </div>
-              </>
-            )}
-
-            {activeTab === 'low-ctr' && (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>CTR Interventions</span>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#EF4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 7px', borderRadius: '9999px' }}>
-                    Action Required
-                  </span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Threshold</div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#EF4444', marginTop: '2px' }}>&lt; 4.0%</div>
-                  </div>
-                  <div className="soft-inset" style={{ padding: '8px 10px', borderRadius: '10px', background: '#E6EAF0' }}>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Goal</div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#10B981', marginTop: '2px' }}>&gt; 6.0%</div>
-                  </div>
-                </div>
-                <div style={{ fontSize: '10px', color: '#64748B', lineHeight: 1.35, borderTop: '1px solid rgba(166, 175, 195, 0.25)', paddingTop: '8px' }}>
-                  Audit thumbnails and titles for videos below the 4% CTR benchmark to recover view velocity.
-                </div>
-              </>
-            )}
-
-            {activeTab === 'leaderboard' && (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>Rankings</span>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#10B981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 7px', borderRadius: '9999px' }}>
-                    Monthly
-                  </span>
-                </div>
-                <div style={{ fontSize: '10px', color: '#64748B', lineHeight: 1.35 }}>
-                  Videos ranked by current calendar month watch time, views, and viewer acquisition.
-                </div>
-              </>
-            )}
-
-            {activeTab === 'competitors' && (
-              <>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1E293B' }}>Benchmark</span>
-                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#6366F1', background: 'rgba(99, 102, 241, 0.1)', padding: '2px 7px', borderRadius: '9999px' }}>
-                    Tracked
-                  </span>
-                </div>
-                <div style={{ fontSize: '10px', color: '#64748B', lineHeight: 1.35 }}>
-                  Comparative growth and upload pace relative to finance education peer channels.
-                </div>
-              </>
-            )}
           </div>
         )}
-      </div>
-    </aside>
-  </>
+      </aside>
+    </>
   );
 }

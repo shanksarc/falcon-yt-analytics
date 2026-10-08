@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   AlertTriangle, CheckCircle, ArrowDownRight, Edit3, Tag, Layers, 
-  ExternalLink, Sparkles, Filter, ArrowUpDown, TrendingUp, Eye, EyeOff, ThumbsUp, Users, Calendar
+  ExternalLink, Sparkles, Filter, ArrowUpDown, TrendingUp, Eye, EyeOff, ThumbsUp, Users, Calendar, SlidersHorizontal
 } from 'lucide-react';
 
 const getPublishYear = (dateStr) => {
@@ -10,7 +10,7 @@ const getPublishYear = (dateStr) => {
   return match ? match[1] : (dateStr.length >= 4 ? dateStr.substring(0, 4) : null);
 };
 
-export default function LowCTRView({ onLogChangeForVideo, onEditCategoryForVideo, onEditListsForVideo }) {
+export default function LowCTRView({ onLogChangeForVideo, onEditCategoryForVideo, onEditListsForVideo, onSelectItem }) {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -465,6 +465,16 @@ export default function LowCTRView({ onLogChangeForVideo, onEditCategoryForVideo
                     {/* Actions */}
                     <td style={{ textAlign: 'right', padding: '12px 14px' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px' }}>
+                        {onSelectItem && (
+                          <button
+                            className="btn-secondary"
+                            style={{ padding: '4px 8px', fontSize: '11px', color: '#2563EB', borderColor: '#DBEAFE', background: '#EFF6FF', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                            onClick={() => onSelectItem(v)}
+                            title="Inspect in Right Dock"
+                          >
+                            <SlidersHorizontal size={11} /> Inspect
+                          </button>
+                        )}
                         <button 
                           className="btn-primary" 
                           style={{ padding: '4px 8px', fontSize: '11px' }}

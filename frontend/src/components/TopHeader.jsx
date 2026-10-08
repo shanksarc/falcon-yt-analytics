@@ -128,19 +128,19 @@ export default function TopHeader({
           <InstallDesktopAppButton />
         </div>
 
-        {/* Right Dock / Inspector Drawer Toggle (visible on tablet / iPad Air & phone) */}
+        {/* Right Dock / Inspector Drawer Toggle */}
         {onToggleRightDock && (
           <button
             onClick={onToggleRightDock}
             id="topheader-btn-toggle-rightdock"
-            title="Open YouTube Impact & Video Inspector"
+            title={isRightDockOpen ? "Collapse Channel Radar & Video Inspector" : "Open Channel Radar & Video Inspector"}
             style={{
               position: 'relative',
               padding: '7px',
               borderRadius: '10px',
-              background: isRightDockOpen ? 'rgba(47, 101, 246, 0.12)' : 'transparent',
-              border: isRightDockOpen ? '1px solid rgba(47, 101, 246, 0.3)' : '1px solid transparent',
-              color: isRightDockOpen ? '#2F65F6' : '#64748B',
+              background: isRightDockOpen ? 'rgba(37, 99, 235, 0.12)' : 'transparent',
+              border: isRightDockOpen ? '1px solid rgba(37, 99, 235, 0.3)' : '1px solid transparent',
+              color: isRightDockOpen ? '#2563EB' : '#64748B',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',

@@ -343,6 +343,7 @@ export default function App() {
               <AllVideoListView
                 key={`all-videos-${refreshKey}`}
                 onNavigateToSyllabus={() => setActiveTab('syllabus')}
+                onSelectItem={handleSelectItem}
               />
             )}
 
@@ -353,6 +354,7 @@ export default function App() {
                 onLogChangeForVideo={(video) => setActiveChangeVideo(video)}
                 onEditCategoryForVideo={(video) => setActiveCategorizeVideo(video)}
                 onEditListsForVideo={(video) => setActiveVideoForLists(video)}
+                onSelectItem={handleSelectItem}
               />
             )}
 
@@ -377,9 +379,53 @@ export default function App() {
         <footer style={{ marginTop: '32px', textAlign: 'center', fontSize: '12px', color: '#94A3B8', padding: '24px 0', borderTop: '1px solid rgba(226, 232, 240, 0.6)' }}>
           Falcon YT Analytics · CFA & FRM Channel Intelligence Platform · Hierarchical List System & 12-Month YoY Engine
         </footer>
+
+        {/* Floating Quick Radar Edge Trigger (Desktop & Tablet when dock is collapsed) */}
+        {!isRightDockOpen && (
+          <button
+            onClick={() => setIsRightDockOpen(true)}
+            id="btn-floating-radar-edge"
+            className="hidden md:flex"
+            title="Open Channel Radar & Video Inspector"
+            style={{
+              position: 'fixed',
+              right: 0,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              zIndex: 35,
+              background: '#0F172A',
+              color: '#FFFFFF',
+              border: '1px solid #334155',
+              borderRight: 'none',
+              borderRadius: '8px 0 0 8px',
+              padding: '10px 5px',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              boxShadow: '-2px 4px 14px rgba(15, 23, 42, 0.25)',
+              fontSize: '10px',
+              fontWeight: 700,
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Sparkles size={13} color="#F59E0B" />
+            <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.08em', color: '#E2E8F0' }}>
+              RADAR
+            </span>
+            {lowCtrCount > 0 && (
+              <span style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                background: '#EF4444'
+              }} />
+            )}
+          </button>
+        )}
       </main>
 
-      {/* 3. RIGHT DOCK — Static (Desktop) & Slide-in Drawer (iPad Air & iPhone 17) */}
+      {/* 3. RIGHT DOCK — Intelligent Channel Radar & Focused Item Studio */}
       <RightSidebarDock
         activeTab={activeTab}
         status={status}
@@ -390,6 +436,10 @@ export default function App() {
         onUpdateItemStatus={handleUpdateInspectorItemStatus}
         onSelectItem={handleSelectItem}
         onDeleteItem={handleDeleteInspectorItem}
+        onLogChangeForVideo={(v) => setActiveChangeVideo(v)}
+        onEditCategoryForVideo={(v) => setActiveCategorizeVideo(v)}
+        onEditListsForVideo={(v) => setActiveVideoForLists(v)}
+        onNavigateTab={handleTabSwitch}
         onOpenLinkModal={(item) => {
           setActiveTab('planner');
         }}

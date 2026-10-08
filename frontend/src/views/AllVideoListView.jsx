@@ -12,7 +12,7 @@ export const getPublishYear = (dateStr) => {
   return match ? match[1] : (dateStr.length >= 4 ? dateStr.substring(0, 4) : null);
 };
 
-export default function AllVideoListView({ onNavigateToSyllabus }) {
+export default function AllVideoListView({ onNavigateToSyllabus, onSelectItem }) {
   const [videos, setVideos] = useState([]);
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1023,24 +1023,48 @@ export default function AllVideoListView({ onNavigateToSyllabus }) {
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding: '12px 18px', textAlign: 'right' }}>
-                        <button
-                          onClick={() => setSelectedVideoForMatch(video)}
-                          disabled={isWorking}
-                          style={{
-                            padding: '4px 8px',
-                            borderRadius: '6px',
-                            border: '1px solid #CBD5E1',
-                            background: '#FFFFFF',
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            color: '#334155',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <Edit3 size={11} style={{ marginRight: '4px', display: 'inline' }} />
-                          {isMatched ? 'Reassign' : 'Map Topic'}
-                        </button>
+                      <td style={{ padding: '12px 18px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          {onSelectItem && (
+                            <button
+                              onClick={() => onSelectItem(video)}
+                              title="Inspect Video in Right Dock"
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid #DBEAFE',
+                                background: '#EFF6FF',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                color: '#2563EB',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <SlidersHorizontal size={11} />
+                              <span>Inspect</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setSelectedVideoForMatch(video)}
+                            disabled={isWorking}
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid #CBD5E1',
+                              background: '#FFFFFF',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              color: '#334155',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Edit3 size={11} style={{ marginRight: '4px', display: 'inline' }} />
+                            {isMatched ? 'Reassign' : 'Map Topic'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1211,27 +1235,51 @@ export default function AllVideoListView({ onNavigateToSyllabus }) {
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding: '12px 18px', textAlign: 'right' }}>
-                        <a
-                          href={`https://www.youtube.com/watch?v=${video.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '4px 8px',
-                            borderRadius: '6px',
-                            border: '1px solid #CBD5E1',
-                            background: '#FFFFFF',
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            color: '#334155',
-                            textDecoration: 'none'
-                          }}
-                        >
-                          <ExternalLink size={11} /> Watch
-                        </a>
+                      <td style={{ padding: '12px 18px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          {onSelectItem && (
+                            <button
+                              onClick={() => onSelectItem(video)}
+                              title="Inspect Video in Right Dock"
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid #DBEAFE',
+                                background: '#EFF6FF',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                color: '#2563EB',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <SlidersHorizontal size={11} />
+                              <span>Inspect</span>
+                            </button>
+                          )}
+                          <a
+                            href={`https://www.youtube.com/watch?v=${video.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid #CBD5E1',
+                              background: '#FFFFFF',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              color: '#334155',
+                              textDecoration: 'none'
+                            }}
+                          >
+                            <ExternalLink size={11} /> Watch
+                          </a>
+                        </div>
                       </td>
                     </tr>
                   );
