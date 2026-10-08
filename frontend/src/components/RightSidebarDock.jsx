@@ -574,44 +574,44 @@ export default function RightSidebarDock({
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     {/* Views */}
-                    <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#64748B', fontWeight: 600 }}>
+                    <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         <Eye size={12} color="#2563EB" /> Views
                       </div>
-                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginTop: '4px', lineHeight: 1 }}>
+                      <div style={{ fontSize: '26px', fontWeight: 900, color: '#1D4ED8', marginTop: '6px', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
                         {formatCompactNum(itemMeta.views)}
                       </div>
                     </div>
 
                     {/* Watch Time */}
-                    <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#64748B', fontWeight: 600 }}>
+                    <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         <Clock size={12} color="#059669" /> Watch Time
                       </div>
-                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginTop: '4px', lineHeight: 1 }}>
-                        {formatCompactNum(itemMeta.watchHours)}h
+                      <div style={{ fontSize: '26px', fontWeight: 900, color: '#047857', marginTop: '6px', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
+                        {formatCompactNum(itemMeta.watchHours)}<span style={{ fontSize: '18px', fontWeight: 700 }}>h</span>
                       </div>
                     </div>
 
                     {/* CTR */}
-                    <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#64748B', fontWeight: 600 }}>
+                    <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         <Percent size={12} color={itemMeta.isFlaggedCTR ? "#E11D48" : "#2563EB"} /> CTR
                       </div>
-                      <div style={{ fontSize: '18px', fontWeight: 800, color: itemMeta.isFlaggedCTR ? "#E11D48" : "#0F172A", marginTop: '4px', lineHeight: 1 }}>
+                      <div style={{ fontSize: '26px', fontWeight: 900, color: itemMeta.isFlaggedCTR ? "#E11D48" : "#0F172A", marginTop: '6px', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
                         {itemMeta.ctr !== null ? `${itemMeta.ctr.toFixed(1)}%` : '—'}
                       </div>
                     </div>
 
                     {/* Like Ratio */}
-                    <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', color: '#64748B', fontWeight: 600 }}>
+                    <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         <ThumbsUp size={12} color="#D97706" /> Likes
                       </div>
-                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginTop: '4px', lineHeight: 1 }}>
+                      <div style={{ fontSize: '26px', fontWeight: 900, color: '#B45309', marginTop: '6px', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
                         {formatCompactNum(itemMeta.likes)}
                         {itemMeta.likeRatio !== null && (
-                          <span style={{ fontSize: '10.5px', color: '#059669', fontWeight: 700, marginLeft: '4px' }}>
+                          <span style={{ fontSize: '13px', color: '#059669', fontWeight: 800, marginLeft: '4px' }}>
                             ({itemMeta.likeRatio}%)
                           </span>
                         )}
@@ -928,6 +928,236 @@ export default function RightSidebarDock({
 
             {/* 3. Tab Contents */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* ─── HERO UPLOAD IMPACT BLOCKS (BIG NUMBERS) ─── */}
+              <div
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '14px',
+                  padding: '14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  boxShadow: '0 2px 8px -2px rgba(15, 23, 42, 0.05)'
+                }}
+              >
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                    <div
+                      style={{
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '7px',
+                        background: '#FFF1F2',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <PlaySquare size={15} color="#E11D48" />
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.01em' }}>
+                        Upload Plan Impact
+                      </span>
+                    </div>
+                  </div>
+
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: '9999px',
+                      background: '#EFF6FF',
+                      color: '#2563EB',
+                      border: '1px solid #DBEAFE'
+                    }}
+                  >
+                    {youtubeStats?.uploaded_count || uploadedCount} Live Uploads
+                  </span>
+                </div>
+
+                {/* 2x2 Big Metric Blocks */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {/* Block 1: Views Generated */}
+                  <div
+                    style={{
+                      background: 'linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%)',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '12px',
+                      padding: '12px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: '88px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <Eye size={13} color="#2563EB" />
+                      <span>Plan Views</span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '30px',
+                        fontWeight: 900,
+                        color: '#1D4ED8',
+                        lineHeight: 1.1,
+                        marginTop: '6px',
+                        fontVariantNumeric: 'tabular-nums',
+                        letterSpacing: '-0.03em'
+                      }}
+                    >
+                      {formatCompactNum(youtubeStats?.total_views || 0)}
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#64748B', marginTop: '4px' }}>
+                      {youtubeStats?.uploaded_count || uploadedCount} videos live
+                    </div>
+                  </div>
+
+                  {/* Block 2: Watch Hours */}
+                  <div
+                    style={{
+                      background: 'linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%)',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '12px',
+                      padding: '12px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: '88px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <Clock size={13} color="#059669" />
+                      <span>Watch Time</span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '30px',
+                        fontWeight: 900,
+                        color: '#047857',
+                        lineHeight: 1.1,
+                        marginTop: '6px',
+                        fontVariantNumeric: 'tabular-nums',
+                        letterSpacing: '-0.03em'
+                      }}
+                    >
+                      {formatCompactNum(youtubeStats?.total_watch_time_hours || 0)}<span style={{ fontSize: '18px', fontWeight: 700 }}>h</span>
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#64748B', marginTop: '4px' }}>
+                      Total learner hours
+                    </div>
+                  </div>
+
+                  {/* Block 3: Upload Velocity Ratio */}
+                  <div
+                    style={{
+                      background: 'linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%)',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '12px',
+                      padding: '12px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: '88px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <CheckCircle2 size={13} color="#7C3AED" />
+                      <span>Live Progress</span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '30px',
+                        fontWeight: 900,
+                        color: '#6D28D9',
+                        lineHeight: 1.1,
+                        marginTop: '6px',
+                        fontVariantNumeric: 'tabular-nums',
+                        letterSpacing: '-0.03em'
+                      }}
+                    >
+                      {youtubeStats?.uploaded_count || uploadedCount}
+                      <span style={{ fontSize: '16px', fontWeight: 600, color: '#94A3B8', marginLeft: '3px' }}>
+                        / {plannedVideos.length || 0}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#64748B', marginTop: '4px' }}>
+                      {Math.max(0, (plannedVideos.length || 0) - (youtubeStats?.uploaded_count || uploadedCount))} left to upload
+                    </div>
+                  </div>
+
+                  {/* Block 4: Total Likes */}
+                  <div
+                    style={{
+                      background: 'linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%)',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '12px',
+                      padding: '12px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: '88px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <ThumbsUp size={13} color="#D97706" />
+                      <span>Total Likes</span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '30px',
+                        fontWeight: 900,
+                        color: '#B45309',
+                        lineHeight: 1.1,
+                        marginTop: '6px',
+                        fontVariantNumeric: 'tabular-nums',
+                        letterSpacing: '-0.03em'
+                      }}
+                    >
+                      {formatCompactNum(youtubeStats?.total_likes || 0)}
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#64748B', marginTop: '4px' }}>
+                      {(youtubeStats?.total_comments || 0).toLocaleString()} comments
+                    </div>
+                  </div>
+                </div>
+
+                {/* Top Upload Performer Snippet */}
+                {youtubeStats?.top_videos?.length > 0 && (
+                  <div
+                    onClick={() => onSelectItem && onSelectItem(youtubeStats.top_videos[0])}
+                    style={{
+                      background: '#EFF6FF',
+                      border: '1px solid #DBEAFE',
+                      borderRadius: '9px',
+                      padding: '8px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      color: '#1E40AF',
+                      transition: 'all 0.15s ease'
+                    }}
+                    title="Click to inspect top performing upload"
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <Sparkles size={13} color="#2563EB" style={{ flexShrink: 0 }} />
+                      <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        Top Video: <strong>{youtubeStats.top_videos[0].title}</strong>
+                      </span>
+                    </div>
+                    <span style={{ fontWeight: 800, color: '#2563EB', flexShrink: 0 }}>
+                      {formatCompactNum(youtubeStats.top_videos[0].views)} views
+                    </span>
+                  </div>
+                )}
+              </div>
+
               {hubTab === 'radar' ? (
                 <>
                   {/* Section A: Urgent Pipeline */}
@@ -1167,25 +1397,39 @@ export default function RightSidebarDock({
                     </div>
                   </div>
 
-                  {/* YouTube Impact Totals */}
-                  {youtubeStats && (
+                  {/* Lifetime Channel Telemetry */}
+                  {status?.summary && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        Upload Plan Impact
+                        Channel Lifetime Telemetry
                       </span>
 
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '10px' }}>
-                          <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>Plan Views</div>
-                          <div style={{ fontSize: '16px', fontWeight: 800, color: '#2563EB', marginTop: '4px' }}>
-                            {formatCompactNum(youtubeStats.total_views)}
+                        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
+                          <div style={{ fontSize: '10.5px', color: '#475569', fontWeight: 700, textTransform: 'uppercase' }}>Lifetime Views</div>
+                          <div style={{ fontSize: '26px', fontWeight: 900, color: '#1D4ED8', marginTop: '4px', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
+                            {formatCompactNum(status.summary.total_views)}
                           </div>
                         </div>
 
-                        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '10px' }}>
-                          <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>Watch Hours</div>
-                          <div style={{ fontSize: '16px', fontWeight: 800, color: '#059669', marginTop: '4px' }}>
-                            {formatCompactNum(youtubeStats.total_watch_time_hours)}h
+                        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
+                          <div style={{ fontSize: '10.5px', color: '#475569', fontWeight: 700, textTransform: 'uppercase' }}>Watch Time</div>
+                          <div style={{ fontSize: '26px', fontWeight: 900, color: '#047857', marginTop: '4px', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
+                            {formatCompactNum(status.summary.total_watch_time)}h
+                          </div>
+                        </div>
+
+                        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
+                          <div style={{ fontSize: '10.5px', color: '#475569', fontWeight: 700, textTransform: 'uppercase' }}>Subscribers</div>
+                          <div style={{ fontSize: '26px', fontWeight: 900, color: '#7C3AED', marginTop: '4px', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
+                            {formatCompactNum(status.summary.total_subscribers)}
+                          </div>
+                        </div>
+
+                        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px' }}>
+                          <div style={{ fontSize: '10.5px', color: '#475569', fontWeight: 700, textTransform: 'uppercase' }}>Avg CTR</div>
+                          <div style={{ fontSize: '26px', fontWeight: 900, color: '#D97706', marginTop: '4px', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
+                            {status.summary.avg_ctr ? `${status.summary.avg_ctr.toFixed(1)}%` : '5.2%'}
                           </div>
                         </div>
                       </div>

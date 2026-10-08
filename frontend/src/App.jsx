@@ -40,7 +40,31 @@ export default function App() {
   const [syncToast, setSyncToast] = useState(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const [isRightDockOpen, setIsRightDockOpen] = useState(false);
+  const [isRightDockOpen, setIsRightDockOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('falcon_right_dock_open');
+      if (saved !== null) return saved === 'true';
+      return window.innerWidth >= 1024; // Sticky open by default on desktop
+    }
+    return true;
+  });
+
+  const handleToggleRightDock = () => {
+    setIsRightDockOpen(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('falcon_right_dock_open', String(next));
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  const handleCloseRightDock = () => {
+    setIsRightDockOpen(false);
+    try {
+      localStorage.setItem('falcon_right_dock_open', 'false');
+    } catch (e) {}
+  };
 
   // Modals
   const [showSettings, setShowSettings] = useState(false);
@@ -217,6 +241,9 @@ export default function App() {
     setSelectedInspectorItem(item);
     if (item) {
       setIsRightDockOpen(true);
+      try {
+        localStorage.setItem('falcon_right_dock_open', 'true');
+      } catch (e) {}
     }
   };
 
@@ -252,7 +279,7 @@ export default function App() {
           onSyncChannel={handleSyncChannel}
           isSyncing={isSyncing}
           onToggleCollapse={() => setIsMobileNavOpen(prev => !prev)}
-          onToggleRightDock={() => setIsRightDockOpen(prev => !prev)}
+          onToggleRightDock={handleToggleRightDock}
           isRightDockOpen={isRightDockOpen}
           hasSelectedItem={Boolean(selectedInspectorItem)}
         />
@@ -444,7 +471,7 @@ export default function App() {
           setActiveTab('planner');
         }}
         isOpen={isRightDockOpen}
-        onClose={() => setIsRightDockOpen(false)}
+        onClose={handleCloseRightDock}
       />
 
       {/* 4. Mobile Bottom Navigation Bar (iPhone 17 & Mobile Screens) */}
@@ -452,7 +479,7 @@ export default function App() {
         activeTab={activeTab}
         onSelectTab={handleTabSwitch}
         onOpenMenu={() => setIsMobileNavOpen(true)}
-        onOpenInspector={() => setIsRightDockOpen(prev => !prev)}
+        onOpenInspector={handleToggleRightDock}
         hasSelectedItem={Boolean(selectedInspectorItem)}
       />
 

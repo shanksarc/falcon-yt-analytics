@@ -1232,8 +1232,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Right Sidebar Dock (Desktop & Responsive Drawer) */
 .right-sidebar-dock-responsive {
-  width: 360px;
-  min-width: 360px;
+  width: 380px;
+  min-width: 380px;
   height: 100%;
   background: #FFFFFF;
   border-left: 1px solid #E2E8F0;
