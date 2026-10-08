@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronRight, Eye, Clock, Users, Percent, Layers, PlayCircle, FolderPlus, Tag, Plus, Check, ThumbsUp } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Eye, Clock, Users, Percent, Layers, PlayCircle, FolderPlus, Tag, Plus, Check, ThumbsUp, Calendar } from 'lucide-react';
 import YoYTrendChart from '../components/YoYTrendChart';
 import CreateListModal from '../components/CreateListModal';
 import ManageVideoListsModal from '../components/ManageVideoListsModal';
@@ -405,9 +405,25 @@ export default function DetailDrilldownView({
                         />
                         <div className="video-title-wrap">
                           <span className="video-title" title={v.title}>{v.title}</span>
-                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                            Published {v.published_at.split('T')[0]}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                            {v.published_at && (
+                              <span style={{
+                                fontSize: '10px',
+                                fontWeight: 750,
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                                background: '#FEF3C7',
+                                color: '#92400E',
+                                border: '1px solid #FDE68A',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px'
+                              }} title={`Published: ${v.published_at}`}>
+                                <Calendar size={10} color="#B45309" />
+                                <span>{v.published_at.match(/\b(20\d\d|19\d\d)\b/)?.[1] || v.published_at.substring(0, 4)}</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>

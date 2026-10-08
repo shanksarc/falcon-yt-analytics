@@ -2,8 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, Search, Film, CheckCircle2, AlertCircle, ExternalLink, 
   Edit3, Unlink, Plus, Filter, ArrowUpDown, RefreshCw, BookOpen, Layers,
-  Eye, Clock, ThumbsUp, Users, Percent, Flame
+  Eye, Clock, ThumbsUp, Users, Percent, Flame, Calendar
 } from 'lucide-react';
+
+const getPublishYear = (dateStr) => {
+  if (!dateStr) return null;
+  const match = String(dateStr).match(/\b(20\d\d|19\d\d)\b/);
+  return match ? match[1] : (dateStr.length >= 4 ? dateStr.substring(0, 4) : null);
+};
 
 export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChanged }) {
   const [videos, setVideos] = useState([]);
@@ -25,6 +31,7 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
   const [filterMatchStatus, setFilterMatchStatus] = useState('ALL'); // 'ALL' | 'MATCHED' | 'UNMATCHED'
   const [filterCourse, setFilterCourse] = useState('ALL');
   const [filterFormat, setFilterFormat] = useState('ALL');
+  const [filterYear, setFilterYear] = useState('ALL');
   const [sortBy, setSortBy] = useState('published_desc');
 
   // Change / Match Topic Modal state
@@ -160,6 +167,11 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
       result = result.filter(v => (v.privacy_status || '').toLowerCase() === 'unlisted');
     }
 
+    // Year filter (Fix 2: clearly visible year & filter)
+    if (filterYear !== 'ALL') {
+      result = result.filter(v => getPublishYear(v.published_at) === filterYear);
+    }
+
     // Match status filter
     if (filterMatchStatus === 'MATCHED') {
       result = result.filter(v => v.is_matched);
@@ -204,7 +216,7 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
     });
 
     return result;
-  }, [videos, searchQuery, filterPrivacy, filterMatchStatus, filterCourse, filterFormat, sortBy]);
+  }, [videos, searchQuery, filterPrivacy, filterYear, filterMatchStatus, filterCourse, filterFormat, sortBy]);
 
   // Topic search in Topic Picker modal
   const filteredTopics = useMemo(() => {
@@ -229,6 +241,15 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
     });
     return res;
   }, [topics, topicCourseFilter, topicSearchQuery]);
+
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    videos.forEach(v => {
+      const yr = getPublishYear(v.published_at);
+      if (yr) years.add(yr);
+    });
+    return Array.from(years).sort().reverse();
+  }, [videos]);
 
   const publicCount = videos.filter(v => (v.privacy_status || 'public').toLowerCase() === 'public').length;
   const unlistedCount = videos.filter(v => (v.privacy_status || '').toLowerCase() === 'unlisted').length;
@@ -534,6 +555,30 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
               </select>
             </div>
 
+            {/* Year Filter (Fix 2: clearly visible year & filter) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '11px', color: '#64748B' }}>Year:</span>
+              <select
+                value={filterYear}
+                onChange={(e) => setFilterYear(e.target.value)}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '12px',
+                  fontWeight: filterYear !== 'ALL' ? 700 : 400,
+                  color: filterYear !== 'ALL' ? '#B45309' : '#0F172A',
+                  background: filterYear !== 'ALL' ? '#FEF3C7' : '#FFFFFF',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="ALL">All Years</option>
+                {availableYears.map(yr => (
+                  <option key={yr} value={yr}>{yr}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Sort Filter */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <span style={{ fontSize: '11px', color: '#64748B' }}>Sort:</span>
@@ -678,9 +723,22 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
                                 {video.format}
                               </span>
 
-                              {video.published_at && (
-                                <span style={{ fontSize: '11px', color: '#94A3B8' }}>
-                                  {video.published_at.substring(0, 10)}
+                              {/* Fix 2: Year of video published as clearly visible tag */}
+                              {getPublishYear(video.published_at) && (
+                                <span style={{
+                                  fontSize: '10px',
+                                  fontWeight: 750,
+                                  padding: '1px 7px',
+                                  borderRadius: '4px',
+                                  background: '#FEF3C7',
+                                  color: '#92400E',
+                                  border: '1px solid #FDE68A',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }} title={`Published: ${video.published_at}`}>
+                                  <Calendar size={10} color="#B45309" />
+                                  <span>{getPublishYear(video.published_at)}</span>
                                 </span>
                               )}
                             </div>

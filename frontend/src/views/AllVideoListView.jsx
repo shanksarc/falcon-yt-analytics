@@ -2,8 +2,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, Film, CheckCircle2, AlertCircle, ExternalLink, 
   Edit3, Unlink, Plus, Filter, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, BookOpen, Layers,
-  Eye, Clock, ThumbsUp, ThumbsDown, Users, Percent, Flame, Video, Globe, Lock, BarChart2
+  Eye, Clock, ThumbsUp, ThumbsDown, Users, Percent, Flame, Video, Globe, Lock, BarChart2, Calendar
 } from 'lucide-react';
+
+// Helper to extract 4-digit publish year
+export const getPublishYear = (dateStr) => {
+  if (!dateStr) return null;
+  const match = String(dateStr).match(/\b(20\d\d|19\d\d)\b/);
+  return match ? match[1] : (dateStr.length >= 4 ? dateStr.substring(0, 4) : null);
+};
 
 export default function AllVideoListView({ onNavigateToSyllabus }) {
   const [videos, setVideos] = useState([]);
@@ -30,6 +37,7 @@ export default function AllVideoListView({ onNavigateToSyllabus }) {
   const [filterMatchStatus, setFilterMatchStatus] = useState('ALL'); // 'ALL' | 'MATCHED' | 'UNMATCHED'
   const [filterCourse, setFilterCourse] = useState('ALL');
   const [filterFormat, setFilterFormat] = useState('ALL');
+  const [filterYear, setFilterYear] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Sorting (Fix 6: Full sorting for all metrics)
@@ -154,6 +162,16 @@ export default function AllVideoListView({ onNavigateToSyllabus }) {
     }
   };
 
+  // Dynamic available years
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    videos.forEach(v => {
+      const yr = getPublishYear(v.published_at);
+      if (yr) years.add(yr);
+    });
+    return Array.from(years).sort().reverse();
+  }, [videos]);
+
   // Filtered & Sorted Videos
   const filteredVideos = useMemo(() => {
     let result = [...videos];
@@ -163,6 +181,11 @@ export default function AllVideoListView({ onNavigateToSyllabus }) {
       result = result.filter(v => (v.privacy_status || 'public') === 'public');
     } else if (filterVisibility === 'unlisted') {
       result = result.filter(v => (v.privacy_status || '') !== 'public');
+    }
+
+    // Year filter (Fix 2: Clearly visible year & filter)
+    if (filterYear !== 'ALL') {
+      result = result.filter(v => getPublishYear(v.published_at) === filterYear);
     }
 
     // Search query filter
@@ -262,7 +285,7 @@ export default function AllVideoListView({ onNavigateToSyllabus }) {
     });
 
     return result;
-  }, [videos, filterVisibility, searchQuery, filterMatchStatus, filterCourse, filterFormat, sortField, sortOrder]);
+  }, [videos, filterVisibility, filterYear, searchQuery, filterMatchStatus, filterCourse, filterFormat, sortField, sortOrder]);
 
   // Topic search in Topic Picker modal
   const filteredTopics = useMemo(() => {
@@ -666,6 +689,30 @@ export default function AllVideoListView({ onNavigateToSyllabus }) {
             </select>
           </div>
 
+          {/* Year Filter (Fix 2: clearly visible year & filter) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <span style={{ fontSize: '11px', color: '#64748B' }}>Year:</span>
+            <select
+              value={filterYear}
+              onChange={(e) => setFilterYear(e.target.value)}
+              style={{
+                padding: '7px 10px',
+                borderRadius: '8px',
+                border: '1px solid #CBD5E1',
+                fontSize: '12px',
+                fontWeight: filterYear !== 'ALL' ? 700 : 400,
+                color: filterYear !== 'ALL' ? '#B45309' : '#0F172A',
+                background: filterYear !== 'ALL' ? '#FEF3C7' : '#FFFFFF',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="ALL">All Years</option>
+              {availableYears.map(yr => (
+                <option key={yr} value={yr}>{yr}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Fix 6: Sorting Dropdown (Quick select) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             <span style={{ fontSize: '11px', color: '#64748B' }}>Sort:</span>
@@ -878,9 +925,22 @@ export default function AllVideoListView({ onNavigateToSyllabus }) {
                                 {video.format}
                               </span>
 
-                              {video.published_at && (
-                                <span style={{ fontSize: '11px', color: '#94A3B8' }}>
-                                  {video.published_at.substring(0, 10)}
+                              {/* Fix 2: Year of video published as clearly visible tag */}
+                              {getPublishYear(video.published_at) && (
+                                <span style={{
+                                  fontSize: '10px',
+                                  fontWeight: 750,
+                                  padding: '1px 7px',
+                                  borderRadius: '4px',
+                                  background: '#FEF3C7',
+                                  color: '#92400E',
+                                  border: '1px solid #FDE68A',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }} title={`Published: ${video.published_at}`}>
+                                  <Calendar size={10} color="#B45309" />
+                                  <span>{getPublishYear(video.published_at)}</span>
                                 </span>
                               )}
                             </div>
@@ -1081,8 +1141,22 @@ export default function AllVideoListView({ onNavigateToSyllabus }) {
                                 {isPublic ? 'Public' : 'Unlisted'}
                               </span>
                               <span style={{ fontSize: '10px', color: '#64748B' }}>{video.course}</span>
-                              {video.published_at && (
-                                <span style={{ fontSize: '10px', color: '#94A3B8' }}>· {video.published_at.substring(0, 10)}</span>
+                              {getPublishYear(video.published_at) && (
+                                <span style={{
+                                  fontSize: '10px',
+                                  fontWeight: 750,
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  background: '#FEF3C7',
+                                  color: '#92400E',
+                                  border: '1px solid #FDE68A',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px'
+                                }} title={`Published: ${video.published_at}`}>
+                                  <Calendar size={10} color="#B45309" />
+                                  <span>{getPublishYear(video.published_at)}</span>
+                                </span>
                               )}
                             </div>
                           </div>

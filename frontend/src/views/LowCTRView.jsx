@@ -1,8 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   AlertTriangle, CheckCircle, ArrowDownRight, Edit3, Tag, Layers, 
-  ExternalLink, Sparkles, Filter, ArrowUpDown, TrendingUp, Eye, EyeOff, ThumbsUp, Users
+  ExternalLink, Sparkles, Filter, ArrowUpDown, TrendingUp, Eye, EyeOff, ThumbsUp, Users, Calendar
 } from 'lucide-react';
+
+const getPublishYear = (dateStr) => {
+  if (!dateStr) return null;
+  const match = String(dateStr).match(/\b(20\d\d|19\d\d)\b/);
+  return match ? match[1] : (dateStr.length >= 4 ? dateStr.substring(0, 4) : null);
+};
 
 export default function LowCTRView({ onLogChangeForVideo, onEditCategoryForVideo, onEditListsForVideo }) {
   const [videos, setVideos] = useState([]);
@@ -12,6 +18,7 @@ export default function LowCTRView({ onLogChangeForVideo, onEditCategoryForVideo
   const [filterPrivacy, setFilterPrivacy] = useState('PUBLIC'); // 'PUBLIC' | 'UNLISTED' | 'ALL'
   const [filterStatus, setFilterStatus] = useState('NEEDS_FIX'); // 'ALL' | 'NEEDS_FIX' | 'OPTIMAL'
   const [filterCourse, setFilterCourse] = useState('ALL');
+  const [filterYear, setFilterYear] = useState('ALL');
   const [sortBy, setSortBy] = useState('opportunity_desc'); // 'opportunity_desc' | 'impr_desc' | 'ctr_asc' | 'gap_desc' | 'views_desc'
 
   useEffect(() => {
@@ -31,6 +38,16 @@ export default function LowCTRView({ onLogChangeForVideo, onEditCategoryForVideo
     }
   };
 
+  // Dynamic available years
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    videos.forEach(v => {
+      const yr = getPublishYear(v.published_at);
+      if (yr) years.add(yr);
+    });
+    return Array.from(years).sort().reverse();
+  }, [videos]);
+
   // Filtered and sorted
   const filteredVideos = useMemo(() => {
     let result = [...videos];
@@ -42,19 +59,24 @@ export default function LowCTRView({ onLogChangeForVideo, onEditCategoryForVideo
       result = result.filter(v => (v.privacy_status || '').toLowerCase() === 'unlisted');
     }
 
-    // 2. Status filter
+    // 2. Year filter (Fix 2: clearly visible year & filter)
+    if (filterYear !== 'ALL') {
+      result = result.filter(v => getPublishYear(v.published_at) === filterYear);
+    }
+
+    // 3. Status filter
     if (filterStatus === 'NEEDS_FIX') {
       result = result.filter(v => v.is_flagged);
     } else if (filterStatus === 'OPTIMAL') {
       result = result.filter(v => v.status === 'OPTIMAL');
     }
 
-    // 3. Course filter
+    // 4. Course filter
     if (filterCourse !== 'ALL') {
       result = result.filter(v => v.course === filterCourse);
     }
 
-    // 4. Sorting
+    // 5. Sorting
     result.sort((a, b) => {
       if (sortBy === 'opportunity_desc') {
         return (b.views_opportunity || 0) - (a.views_opportunity || 0);
@@ -75,7 +97,7 @@ export default function LowCTRView({ onLogChangeForVideo, onEditCategoryForVideo
     });
 
     return result;
-  }, [videos, filterPrivacy, filterStatus, filterCourse, sortBy]);
+  }, [videos, filterPrivacy, filterYear, filterStatus, filterCourse, sortBy]);
 
   // Aggregate stats
   const publicCount = videos.filter(v => (v.privacy_status || 'public').toLowerCase() === 'public').length;
@@ -164,6 +186,23 @@ export default function LowCTRView({ onLogChangeForVideo, onEditCategoryForVideo
               <option value="FRM Part 1">FRM Part 1</option>
               <option value="FRM Part 2">FRM Part 2</option>
               <option value="General Prep">General Prep</option>
+            </select>
+          </div>
+
+          {/* Year Filter (Fix 2: clearly visible year & filter) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Year:</span>
+            <select 
+              className="control-select"
+              value={filterYear}
+              onChange={(e) => setFilterYear(e.target.value)}
+              id="select-low-ctr-year"
+              style={{ fontWeight: filterYear !== 'ALL' ? 700 : 400, background: filterYear !== 'ALL' ? '#FEF3C7' : 'inherit' }}
+            >
+              <option value="ALL">All Years</option>
+              {availableYears.map(yr => (
+                <option key={yr} value={yr}>{yr}</option>
+              ))}
             </select>
           </div>
 
@@ -277,6 +316,24 @@ export default function LowCTRView({ onLogChangeForVideo, onEditCategoryForVideo
                             <span className={`badge ${isCFA ? 'badge-cfa' : 'badge-frm'}`} style={{ fontSize: '10px', padding: '1px 6px' }}>{v.course}</span>
                             <span className="badge badge-prep" style={{ fontSize: '10px', padding: '1px 6px' }}>{v.topic}</span>
                             <span className="badge badge-format" style={{ fontSize: '10px', padding: '1px 6px' }}>{v.format}</span>
+                            {/* Fix 2: Year of video published as clearly visible tag */}
+                            {getPublishYear(v.published_at) && (
+                              <span style={{
+                                fontSize: '10px',
+                                fontWeight: 750,
+                                padding: '1px 7px',
+                                borderRadius: '4px',
+                                background: '#FEF3C7',
+                                color: '#92400E',
+                                border: '1px solid #FDE68A',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px'
+                              }} title={`Published: ${v.published_at}`}>
+                                <Calendar size={10} color="#B45309" />
+                                <span>{getPublishYear(v.published_at)}</span>
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
