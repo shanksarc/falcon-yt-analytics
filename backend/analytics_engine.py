@@ -293,6 +293,9 @@ def get_channel_summary() -> Dict[str, Any]:
             COALESCE(SUM(views), 0) as total_views,
             COALESCE(SUM(watch_time_hours), 0.0) as total_watch_time,
             COALESCE(SUM(subscribers_gained), 0) as total_subscribers,
+            COALESCE(SUM(likes), 0) as total_likes,
+            COALESCE(SUM(dislikes), 0) as total_dislikes,
+            COALESCE(SUM(impressions), 0) as total_impressions,
             ROUND(AVG(ctr), 2) as avg_ctr,
             ROUND(AVG(avg_view_duration), 0) as avg_avd
         FROM videos
@@ -314,7 +317,7 @@ def get_channel_summary() -> Dict[str, Any]:
     views_growth = round(((cur_v - prev_v) / (prev_v if prev_v > 0 else 1)) * 100, 1)
 
     # Check for accurate channel subscriber count and channel views in settings
-    cursor.execute("SELECT key, value FROM settings WHERE key IN ('channel_subscribers', 'manual_channel_subscribers', 'channel_views', 'manual_channel_views')")
+    cursor.execute("SELECT key, value FROM settings WHERE key IN ('channel_subscribers', 'manual_channel_subscribers', 'channel_views', 'manual_channel_views', 'channel_total_watch_time', 'channel_total_likes', 'channel_total_impressions', 'channel_avg_ctr')")
     s_rows = {r["key"]: r["value"] for r in cursor.fetchall()}
     
     channel_subs = None
@@ -341,13 +344,44 @@ def get_channel_summary() -> Dict[str, Any]:
         except (ValueError, TypeError):
             pass
 
+    channel_watch_time = None
+    if s_rows.get("channel_total_watch_time"):
+        try:
+            channel_watch_time = float(s_rows["channel_total_watch_time"])
+        except (ValueError, TypeError):
+            pass
+
+    channel_likes = None
+    if s_rows.get("channel_total_likes"):
+        try:
+            channel_likes = int(s_rows["channel_total_likes"])
+        except (ValueError, TypeError):
+            pass
+
+    channel_impr = None
+    if s_rows.get("channel_total_impressions"):
+        try:
+            channel_impr = int(s_rows["channel_total_impressions"])
+        except (ValueError, TypeError):
+            pass
+
+    channel_ctr = None
+    if s_rows.get("channel_avg_ctr"):
+        try:
+            channel_ctr = float(s_rows["channel_avg_ctr"])
+        except (ValueError, TypeError):
+            pass
+
     conn.close()
     return {
         "total_videos": row["total_videos"],
         "total_views": channel_views if (channel_views is not None and channel_views > 0) else row["total_views"],
-        "total_watch_time": round(row["total_watch_time"], 1),
+        "total_watch_time": round(channel_watch_time if channel_watch_time is not None else row["total_watch_time"], 1),
         "total_subscribers": channel_subs if channel_subs is not None else row["total_subscribers"],
-        "avg_ctr": row["avg_ctr"] or 0.0,
+        "total_likes": channel_likes if channel_likes is not None else row["total_likes"],
+        "total_dislikes": row["total_dislikes"],
+        "total_impressions": channel_impr if channel_impr is not None else row["total_impressions"],
+        "avg_ctr": channel_ctr if channel_ctr is not None else (row["avg_ctr"] or 0.0),
         "avg_view_duration": int(row["avg_avd"] or 0),
         "yoy_growth_pct": views_growth
     }
@@ -598,7 +632,8 @@ def get_low_ctr_triage() -> List[Dict[str, Any]]:
     cursor.execute("""
         SELECT 
             id, title, course, topic, format, views, impressions, ctr,
-            avg_view_duration, watch_time_hours, published_at, thumbnail_url
+            avg_view_duration, watch_time_hours, published_at, thumbnail_url,
+            likes, dislikes, subscribers_gained, privacy_status, duration_seconds
         FROM videos
         ORDER BY views DESC
     """)
@@ -611,10 +646,14 @@ def get_low_ctr_triage() -> List[Dict[str, Any]]:
         base_info = baselines.get(key, {"baseline_ctr": 5.0, "sample_size": 1})
         baseline = base_info["baseline_ctr"]
 
-        ctr = v["ctr"]
+        ctr = v["ctr"] or 0.0
         delta = ctr - baseline
         pct_diff = round(((ctr - baseline) / (baseline if baseline > 0 else 1.0)) * 100, 1)
-        is_underperforming = (ctr < baseline * 0.98) and (v["impressions"] >= 500)
+        impr = v["impressions"] or 0
+        is_underperforming = (ctr < baseline * 0.98) and (impr >= 200)
+
+        # Potential additional views if CTR matched the category baseline
+        views_opportunity = int(round(((baseline - ctr) / 100.0) * impr)) if (is_underperforming and delta < 0) else 0
 
         recommendations = []
         if is_underperforming:
@@ -638,16 +677,18 @@ def get_low_ctr_triage() -> List[Dict[str, Any]]:
 
         flagged.append({
             **v,
+            "privacy_status": v.get("privacy_status") or "public",
             "category_baseline_ctr": baseline,
             "category_sample_size": base_info["sample_size"],
             "ctr_difference": round(delta, 2),
             "ctr_pct_gap": pct_diff,
+            "views_opportunity": views_opportunity,
             "status": status,
             "is_flagged": is_underperforming,
             "recommendations": recommendations
         })
 
-    flagged.sort(key=lambda x: (not x["is_flagged"], x["ctr_pct_gap"]))
+    flagged.sort(key=lambda x: (not x["is_flagged"], -x["views_opportunity"], x["ctr_pct_gap"]))
     return flagged
 
 def calculate_change_impact(
@@ -1046,7 +1087,11 @@ def get_session_details(session_id: str) -> Dict[str, Any]:
             pv.*,
             v.title as linked_video_title,
             v.published_at as linked_video_published_at,
-            v.views as linked_video_views
+            v.views as linked_video_views,
+            v.watch_time_hours as linked_video_watch_time,
+            v.likes as linked_video_likes,
+            v.subscribers_gained as linked_video_subscribers,
+            v.ctr as linked_video_ctr
         FROM planned_videos pv
         LEFT JOIN videos v ON pv.linked_video_id = v.id
         WHERE pv.session_id = ?
@@ -1087,6 +1132,9 @@ def get_planned_videos_filtered(session_id: Optional[str] = None, list_id: Optio
             v.title as linked_video_title,
             v.published_at as linked_video_published_at,
             v.views as linked_video_views,
+            v.watch_time_hours as linked_video_watch_time,
+            v.subscribers_gained as linked_video_subscribers,
+            v.ctr as linked_video_ctr,
             v.likes as linked_video_likes,
             v.comments as linked_video_comments
         FROM planned_videos pv
@@ -1156,6 +1204,9 @@ def get_shorts_overview(session_id: Optional[str] = None) -> Dict[str, Any]:
             v.title as linked_video_title,
             v.published_at as linked_video_published_at,
             v.views as linked_video_views,
+            v.watch_time_hours as linked_video_watch_time,
+            v.subscribers_gained as linked_video_subscribers,
+            v.ctr as linked_video_ctr,
             v.likes as linked_video_likes,
             v.comments as linked_video_comments
         FROM planned_videos pv
@@ -3904,6 +3955,9 @@ def get_all_videos_reverse_match() -> Dict[str, Any]:
         SELECT 
             v.id, v.title, v.thumbnail_url, v.published_at, v.duration_seconds,
             v.course, v.topic, v.format, v.views, v.impressions, v.ctr,
+            v.likes, v.dislikes, v.watch_time_hours, v.subscribers_gained,
+            v.avg_view_duration, v.new_viewers, v.returning_viewers,
+            v.privacy_status,
             t.id as topic_id, t.name as topic_name,
             s.name as subject_name, cr.name as course_name,
             lv.auto_assigned
@@ -3921,18 +3975,35 @@ def get_all_videos_reverse_match() -> Dict[str, Any]:
     for r in rows:
         v_id = r["id"]
         if v_id not in videos_map:
+            dur = r["duration_seconds"] or 0
+            avd = r["avg_view_duration"] or 0
+            ret_pct = round((avd / dur * 100), 1) if (dur > 0 and avd > 0) else 0.0
+            l_cnt = r["likes"] or 0
+            d_cnt = r["dislikes"] or 0
+            like_ratio = round((l_cnt / (l_cnt + d_cnt) * 100), 1) if (l_cnt + d_cnt) > 0 else 100.0
+
             videos_map[v_id] = {
                 "id": r["id"],
                 "title": r["title"],
-                "thumbnail_url": r["thumbnail_url"] or "",
+                "thumbnail_url": r["thumbnail_url"] or f"https://img.youtube.com/vi/{r['id']}/hqdefault.jpg",
                 "published_at": r["published_at"] or "",
-                "duration_seconds": r["duration_seconds"] or 0,
+                "duration_seconds": dur,
                 "course": r["course"] or "",
                 "topic": r["topic"] or "",
                 "format": r["format"] or "Core Lecture",
                 "views": r["views"] or 0,
                 "impressions": r["impressions"] or 0,
                 "ctr": round(r["ctr"] or 0.0, 2),
+                "likes": l_cnt,
+                "dislikes": d_cnt,
+                "like_ratio": like_ratio,
+                "watch_time_hours": round(r["watch_time_hours"] or 0.0, 1),
+                "subscribers_gained": r["subscribers_gained"] or 0,
+                "avg_view_duration": avd,
+                "retention_pct": ret_pct,
+                "new_viewers": r["new_viewers"] or 0,
+                "returning_viewers": r["returning_viewers"] or 0,
+                "privacy_status": r["privacy_status"] or "public",
                 "matched_topics": []
             }
         if r["topic_id"]:
@@ -3950,11 +4021,28 @@ def get_all_videos_reverse_match() -> Dict[str, Any]:
 
     matched_count = sum(1 for v in video_list if v["is_matched"])
     unmatched_count = len(video_list) - matched_count
+    public_count = sum(1 for v in video_list if v.get("privacy_status") == "public")
+    unlisted_count = len(video_list) - public_count
+
+    total_views = sum(v["views"] for v in video_list)
+    total_watch_time = round(sum(v["watch_time_hours"] for v in video_list), 1)
+    total_likes = sum(v["likes"] for v in video_list)
+    total_subscribers = sum(v["subscribers_gained"] for v in video_list)
+    total_impressions = sum(v["impressions"] for v in video_list)
+    avg_ctr = round(sum(v["ctr"] for v in video_list) / len(video_list), 2) if video_list else 0.0
 
     return {
         "total_videos": len(video_list),
         "matched_count": matched_count,
         "unmatched_count": unmatched_count,
+        "public_count": public_count,
+        "unlisted_count": unlisted_count,
+        "total_views": total_views,
+        "total_watch_time": total_watch_time,
+        "total_likes": total_likes,
+        "total_subscribers": total_subscribers,
+        "total_impressions": total_impressions,
+        "avg_ctr": avg_ctr,
         "videos": video_list
     }
 

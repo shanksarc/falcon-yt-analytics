@@ -356,6 +356,22 @@ def get_summary_endpoint():
 def get_channel_yoy_trend():
     return get_12m_yoy_trend(scope_type="channel")
 
+@app.get("/api/channel/weekly-likes")
+def get_channel_weekly_likes_endpoint():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS channel_weekly_metrics (
+            week_date TEXT PRIMARY KEY,
+            likes INTEGER NOT NULL,
+            cumulative_likes INTEGER NOT NULL
+        )
+    """)
+    cursor.execute("SELECT week_date, likes, cumulative_likes FROM channel_weekly_metrics ORDER BY week_date ASC")
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return {"total_weeks": len(rows), "data": rows}
+
 # -------------------------------------------------------------
 # Sections 02 & 03: Hierarchical Lists & Drill-Down Views
 # -------------------------------------------------------------

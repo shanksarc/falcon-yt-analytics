@@ -11,6 +11,7 @@ import UploadPlannerView from './views/UploadPlannerView';
 import ShortsPlannerView from './views/ShortsPlannerView';
 import ManagePlanView from './views/ManagePlanView';
 import SyllabusMatcherView from './views/SyllabusMatcherView';
+import AllVideoListView from './views/AllVideoListView';
 
 import ChangeLogModal from './components/ChangeLogModal';
 import CategorizeModal from './components/CategorizeModal';
@@ -335,6 +336,14 @@ export default function App() {
             {/* Tab 3: Monthly Leaderboard */}
             {activeTab === 'leaderboard' && (
               <LeaderboardView key={`leaderboard-${refreshKey}`} />
+            )}
+
+            {/* Tab: All Video List (Fix 1, Fix 3) */}
+            {activeTab === 'all-videos' && (
+              <AllVideoListView
+                key={`all-videos-${refreshKey}`}
+                onNavigateToSyllabus={() => setActiveTab('syllabus')}
+              />
             )}
 
             {/* Tab 4: Low-CTR Triage */}

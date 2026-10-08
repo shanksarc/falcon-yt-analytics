@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Eye, Clock, Users, Percent, TrendingUp, TrendingDown, 
-  Layers, Plus, Settings2, FolderPlus, ArrowRight, PlaySquare, ChevronRight, Sparkles 
+  Layers, Plus, Settings2, FolderPlus, ArrowRight, PlaySquare, ChevronRight, Sparkles, ThumbsUp 
 } from 'lucide-react';
 import YoYTrendChart from '../components/YoYTrendChart';
 import ManagePinnedBlocksModal from '../components/ManagePinnedBlocksModal';
@@ -205,6 +205,16 @@ export default function PerformanceOverviewView({ onNavigateDrilldown }) {
               {formatNum(summary?.total_subscribers)}
             </div>
             <div style={styles.kpiSub}>Audience base</div>
+          </div>
+
+          <div style={styles.kpiCard}>
+            <div style={styles.kpiLabel}>Likes & Feedback</div>
+            <div style={styles.kpiValue}>
+              {formatNum(summary?.total_likes)}
+            </div>
+            <div style={styles.kpiSub}>
+              {summary?.total_impressions ? `${formatNum(summary?.total_impressions)} impr.` : 'Positive feedback'}
+            </div>
           </div>
 
           <div style={styles.kpiCard}>

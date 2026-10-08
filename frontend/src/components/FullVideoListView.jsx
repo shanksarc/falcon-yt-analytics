@@ -1215,8 +1215,10 @@ export default function FullVideoListView({
                                 {pv.linked_video_title || pv.linked_video_id}
                               </div>
                               {pv.linked_video_views !== undefined && (
-                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                                  {(pv.linked_video_views || 0).toLocaleString()} views
+                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                  <span>{(pv.linked_video_views || 0).toLocaleString()} views</span>
+                                  {pv.linked_video_watch_time ? <span>· {Math.round(pv.linked_video_watch_time)}h</span> : null}
+                                  {pv.linked_video_likes ? <span>· {pv.linked_video_likes} 👍</span> : null}
                                 </div>
                               )}
                             </div>

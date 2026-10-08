@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, Search, Film, CheckCircle2, AlertCircle, ExternalLink, 
-  Edit3, Unlink, Plus, Filter, ArrowUpDown, RefreshCw, BookOpen, Layers
+  Edit3, Unlink, Plus, Filter, ArrowUpDown, RefreshCw, BookOpen, Layers,
+  Eye, Clock, ThumbsUp, Users, Percent, Flame
 } from 'lucide-react';
 
 export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChanged }) {
@@ -9,9 +10,18 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [aggregateStats, setAggregateStats] = useState({
+    totalViews: 0,
+    totalWatchTime: 0,
+    totalLikes: 0,
+    totalSubs: 0,
+    totalImpr: 0,
+    avgCtr: 0
+  });
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterPrivacy, setFilterPrivacy] = useState('PUBLIC'); // 'PUBLIC' | 'UNLISTED' | 'ALL'
   const [filterMatchStatus, setFilterMatchStatus] = useState('ALL'); // 'ALL' | 'MATCHED' | 'UNMATCHED'
   const [filterCourse, setFilterCourse] = useState('ALL');
   const [filterFormat, setFilterFormat] = useState('ALL');
@@ -39,6 +49,14 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
       const tData = await tRes.json();
       setVideos(vData.videos || []);
       setTopics(tData || []);
+      setAggregateStats({
+        totalViews: vData.total_views || 0,
+        totalWatchTime: vData.total_watch_time || 0,
+        totalLikes: vData.total_likes || 0,
+        totalSubs: vData.total_subscribers || 0,
+        totalImpr: vData.total_impressions || 0,
+        avgCtr: vData.avg_ctr || 0
+      });
     } catch (err) {
       console.error('Failed to load video analytics or topics:', err);
     } finally {
@@ -135,6 +153,13 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
       );
     }
 
+    // Privacy status filter (First filter)
+    if (filterPrivacy === 'PUBLIC') {
+      result = result.filter(v => (v.privacy_status || 'public').toLowerCase() === 'public');
+    } else if (filterPrivacy === 'UNLISTED') {
+      result = result.filter(v => (v.privacy_status || '').toLowerCase() === 'unlisted');
+    }
+
     // Match status filter
     if (filterMatchStatus === 'MATCHED') {
       result = result.filter(v => v.is_matched);
@@ -160,8 +185,18 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
         return (a.published_at || '').localeCompare(b.published_at || '');
       } else if (sortBy === 'views_desc') {
         return (b.views || 0) - (a.views || 0);
+      } else if (sortBy === 'watch_desc') {
+        return (b.watch_time_hours || 0) - (a.watch_time_hours || 0);
+      } else if (sortBy === 'subs_desc') {
+        return (b.subscribers_gained || 0) - (a.subscribers_gained || 0);
+      } else if (sortBy === 'likes_desc') {
+        return (b.likes || 0) - (a.likes || 0);
       } else if (sortBy === 'ctr_desc') {
         return (b.ctr || 0) - (a.ctr || 0);
+      } else if (sortBy === 'retention_desc') {
+        return (b.retention_pct || 0) - (a.retention_pct || 0);
+      } else if (sortBy === 'duration_desc') {
+        return (b.duration_seconds || 0) - (a.duration_seconds || 0);
       } else if (sortBy === 'match_status') {
         return (b.is_matched ? 1 : 0) - (a.is_matched ? 1 : 0);
       }
@@ -169,7 +204,7 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
     });
 
     return result;
-  }, [videos, searchQuery, filterMatchStatus, filterCourse, filterFormat, sortBy]);
+  }, [videos, searchQuery, filterPrivacy, filterMatchStatus, filterCourse, filterFormat, sortBy]);
 
   // Topic search in Topic Picker modal
   const filteredTopics = useMemo(() => {
@@ -195,6 +230,8 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
     return res;
   }, [topics, topicCourseFilter, topicSearchQuery]);
 
+  const publicCount = videos.filter(v => (v.privacy_status || 'public').toLowerCase() === 'public').length;
+  const unlistedCount = videos.filter(v => (v.privacy_status || '').toLowerCase() === 'unlisted').length;
   const matchedCount = videos.filter(v => v.is_matched).length;
   const unmatchedCount = videos.length - matchedCount;
   const matchRatePct = videos.length > 0 ? Math.round((matchedCount / videos.length) * 100) : 0;
@@ -253,7 +290,7 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
               </span>
             </div>
             <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', marginTop: '4px' }}>
-              Full Video Analytics & Reverse Matcher
+              All Video List & Reverse Matcher
             </h3>
             <p style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
               Verify syllabus mappings for all YouTube videos. Easily change, link, or unlink topic assignments.
@@ -297,31 +334,74 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
           background: '#FAFAFC',
           borderBottom: '1px solid #F1F5F9',
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
           gap: '12px',
           flexShrink: 0
         }}>
           <div style={{ background: '#FFFFFF', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748B' }}>Total Videos</div>
-            <div style={{ fontSize: '18px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{videos.length}</div>
-          </div>
-          <div style={{ background: '#FFFFFF', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#10B981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <CheckCircle2 size={12} />
-              <span>Matched to Syllabus</span>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Film size={12} color="#64748B" />
+              <span>Catalog Coverage</span>
             </div>
-            <div style={{ fontSize: '18px', fontWeight: 800, color: '#10B981', marginTop: '2px' }}>{matchedCount}</div>
-          </div>
-          <div style={{ background: '#FFFFFF', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#F59E0B', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <AlertCircle size={12} />
-              <span>Unmatched Videos</span>
+            <div style={{ fontSize: '17px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
+              {videos.length} <span style={{ fontSize: '11px', fontWeight: 600, color: '#10B981' }}>({matchRatePct}% mapped)</span>
             </div>
-            <div style={{ fontSize: '18px', fontWeight: 800, color: '#F59E0B', marginTop: '2px' }}>{unmatchedCount}</div>
+            <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '1px' }}>{matchedCount} linked · {unmatchedCount} unlinked</div>
           </div>
+
           <div style={{ background: '#FFFFFF', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: '#6366F1' }}>Linkage Coverage</div>
-            <div style={{ fontSize: '18px', fontWeight: 800, color: '#6366F1', marginTop: '2px' }}>{matchRatePct}%</div>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Eye size={12} color="#3B82F6" />
+              <span>Lifetime Views</span>
+            </div>
+            <div style={{ fontSize: '17px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
+              {(aggregateStats.totalViews || 0).toLocaleString()}
+            </div>
+            <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '1px' }}>Across full catalog</div>
+          </div>
+
+          <div style={{ background: '#FFFFFF', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Clock size={12} color="#8B5CF6" />
+              <span>Watch Time</span>
+            </div>
+            <div style={{ fontSize: '17px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
+              {Math.round(aggregateStats.totalWatchTime || 0).toLocaleString()} <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748B' }}>hrs</span>
+            </div>
+            <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '1px' }}>Student watch hours</div>
+          </div>
+
+          <div style={{ background: '#FFFFFF', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Users size={12} color="#10B981" />
+              <span>Subscribers Gained</span>
+            </div>
+            <div style={{ fontSize: '17px', fontWeight: 800, color: '#10B981', marginTop: '2px' }}>
+              +{(aggregateStats.totalSubs || 0).toLocaleString()}
+            </div>
+            <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '1px' }}>Direct conversions</div>
+          </div>
+
+          <div style={{ background: '#FFFFFF', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <ThumbsUp size={12} color="#F59E0B" />
+              <span>Total Likes</span>
+            </div>
+            <div style={{ fontSize: '17px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
+              {(aggregateStats.totalLikes || 0).toLocaleString()}
+            </div>
+            <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '1px' }}>Student appreciation</div>
+          </div>
+
+          <div style={{ background: '#FFFFFF', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Percent size={12} color="#EC4899" />
+              <span>Avg CTR</span>
+            </div>
+            <div style={{ fontSize: '17px', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
+              {(aggregateStats.avgCtr || 0).toFixed(2)}%
+            </div>
+            <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '1px' }}>{(aggregateStats.totalImpr || 0).toLocaleString()} impressions</div>
           </div>
         </div>
 
@@ -358,6 +438,29 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* FIX 2: Visibility Filter (First filter) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Visibility:</span>
+              <select
+                value={filterPrivacy}
+                onChange={(e) => setFilterPrivacy(e.target.value)}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: '8px',
+                  border: '1px solid #3B82F6',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: '#0F172A',
+                  background: '#F8FAFC',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="PUBLIC">🟢 Published Only ({publicCount})</option>
+                <option value="UNLISTED">🔒 Unlisted Only ({unlistedCount})</option>
+                <option value="ALL">🌐 All Videos ({videos.length})</option>
+              </select>
+            </div>
+
             {/* Match Status Filter */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <span style={{ fontSize: '11px', color: '#64748B' }}>Match Status:</span>
@@ -450,7 +553,12 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
                 <option value="published_desc">Published (Newest)</option>
                 <option value="published_asc">Published (Oldest)</option>
                 <option value="views_desc">Views (High to Low)</option>
+                <option value="watch_desc">Watch Time (High to Low)</option>
+                <option value="subs_desc">Subscribers (High to Low)</option>
+                <option value="likes_desc">Likes (High to Low)</option>
                 <option value="ctr_desc">CTR % (High to Low)</option>
+                <option value="retention_desc">Retention % (High to Low)</option>
+                <option value="duration_desc">Duration (Longest)</option>
                 <option value="match_status">Match Status</option>
               </select>
             </div>
@@ -472,11 +580,14 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <th style={{ padding: '12px 20px', minWidth: '380px' }}>Video & Categorization</th>
-                  <th style={{ padding: '12px 14px', width: '120px' }}>Performance</th>
-                  <th style={{ padding: '12px 14px', width: '90px' }}>CTR</th>
-                  <th style={{ padding: '12px 16px', minWidth: '320px' }}>Syllabus Match Status</th>
-                  <th style={{ padding: '12px 20px', width: '150px', textAlign: 'right' }}>Actions</th>
+                  <th style={{ padding: '12px 18px', minWidth: '300px' }}>Video & Categorization</th>
+                  <th style={{ padding: '12px 10px', width: '90px', textAlign: 'right' }}>Views</th>
+                  <th style={{ padding: '12px 10px', width: '100px', textAlign: 'right' }}>Impressions</th>
+                  <th style={{ padding: '12px 12px', width: '130px' }}>Watch Time & Ret.</th>
+                  <th style={{ padding: '12px 12px', width: '130px' }}>Engagement & Subs</th>
+                  <th style={{ padding: '12px 12px', width: '80px' }}>CTR</th>
+                  <th style={{ padding: '12px 16px', minWidth: '280px' }}>Syllabus Match Status</th>
+                  <th style={{ padding: '12px 18px', width: '120px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody style={{ fontSize: '13px', color: '#334155' }}>
@@ -497,7 +608,7 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
                       }}
                     >
                       {/* Video Cell */}
-                      <td style={{ padding: '12px 20px' }}>
+                      <td style={{ padding: '12px 18px' }}>
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                           <div style={{ position: 'relative', width: '76px', height: '44px', flexShrink: 0 }}>
                             <img
@@ -577,18 +688,59 @@ export default function FullVideoAnalyticsModal({ isOpen, onClose, onMatchChange
                         </div>
                       </td>
 
-                      {/* Performance */}
-                      <td style={{ padding: '12px 14px' }}>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>
+                      {/* FIX 5: Views (Separate) */}
+                      <td style={{ padding: '12px 10px', textAlign: 'right' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#2563EB', fontFamily: 'monospace' }}>
                           {(video.views || 0).toLocaleString()}
                         </div>
-                        <div style={{ fontSize: '11px', color: '#94A3B8' }}>
-                          {(video.impressions || 0).toLocaleString()} impr.
+                      </td>
+
+                      {/* FIX 5: Impressions (Separate) */}
+                      <td style={{ padding: '12px 10px', textAlign: 'right' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A', fontFamily: 'monospace' }}>
+                          {(video.impressions || 0).toLocaleString()}
+                        </div>
+                      </td>
+
+                      {/* Watch Time & Retention */}
+                      <td style={{ padding: '12px 12px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#4F46E5' }}>
+                          {(video.watch_time_hours || 0).toLocaleString()} hrs
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
+                          <span>AVD: {Math.floor((video.avg_view_duration || 0) / 60)}m{(video.avg_view_duration || 0) % 60}s</span>
+                          {video.retention_pct > 0 && (
+                            <span style={{
+                              fontSize: '10px',
+                              fontWeight: 600,
+                              color: video.retention_pct >= 25 ? '#10B981' : '#64748B',
+                              background: video.retention_pct >= 25 ? '#ECFDF5' : '#F1F5F9',
+                              padding: '1px 4px',
+                              borderRadius: '3px'
+                            }}>
+                              {video.retention_pct}% ret.
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Engagement & Subscribers */}
+                      <td style={{ padding: '12px 12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700, color: '#0F172A' }}>
+                          <ThumbsUp size={11} color="#F59E0B" />
+                          <span>{(video.likes || 0).toLocaleString()}</span>
+                          <span style={{ fontSize: '10px', fontWeight: 500, color: '#94A3B8' }}>
+                            ({(video.like_ratio || 100).toFixed(0)}%)
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#10B981', fontWeight: 600, marginTop: '2px' }}>
+                          <Users size={11} color="#10B981" />
+                          <span>+{(video.subscribers_gained || 0).toLocaleString()} subs</span>
                         </div>
                       </td>
 
                       {/* CTR */}
-                      <td style={{ padding: '12px 14px' }}>
+                      <td style={{ padding: '12px 12px' }}>
                         <span style={{
                           fontFamily: 'monospace',
                           fontSize: '12px',

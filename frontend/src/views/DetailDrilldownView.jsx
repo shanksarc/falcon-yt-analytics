@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronRight, Eye, Clock, Users, Percent, Layers, PlayCircle, FolderPlus, Tag, Plus, Check } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Eye, Clock, Users, Percent, Layers, PlayCircle, FolderPlus, Tag, Plus, Check, ThumbsUp } from 'lucide-react';
 import YoYTrendChart from '../components/YoYTrendChart';
 import CreateListModal from '../components/CreateListModal';
 import ManageVideoListsModal from '../components/ManageVideoListsModal';
@@ -124,6 +124,86 @@ export default function DetailDrilldownView({
                   <Layers size={11} /> Edit Allocated Lists
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Video Lifetime Performance Metrics Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+          gap: '14px',
+          marginBottom: '1.5rem'
+        }}>
+          <div className="content-card" style={{ padding: '16px 18px', margin: 0 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Eye size={13} color="var(--cfa-gold)" /> Lifetime Views
+            </div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>
+              {formatNum(v.views)}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              {(v.impressions || 0).toLocaleString()} impressions
+            </div>
+          </div>
+
+          <div className="content-card" style={{ padding: '16px 18px', margin: 0 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Clock size={13} color="var(--frm-blue)" /> Watch Time
+            </div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>
+              {Math.round(v.watch_time_hours || 0).toLocaleString()} <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}>hrs</span>
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Total student engagement
+            </div>
+          </div>
+
+          <div className="content-card" style={{ padding: '16px 18px', margin: 0 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Users size={13} color="var(--success-green)" /> Subscribers Gained
+            </div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--success-green)', marginTop: '4px' }}>
+              +{v.subscribers_gained || 0}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Direct conversions
+            </div>
+          </div>
+
+          <div className="content-card" style={{ padding: '16px 18px', margin: 0 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Percent size={13} color="#EC4899" /> Thumbnail CTR
+            </div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 700, color: (v.ctr || 0) >= 4.0 ? 'var(--success-green)' : 'var(--text-primary)', marginTop: '4px' }}>
+              {(v.ctr || 0).toFixed(1)}%
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Click-through efficiency
+            </div>
+          </div>
+
+          <div className="content-card" style={{ padding: '16px 18px', margin: 0 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <ThumbsUp size={13} color="#F59E0B" /> Likes & Feedback
+            </div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>
+              {(v.likes || 0).toLocaleString()}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              {v.dislikes ? `${v.dislikes} dislikes · ` : ''}{((v.likes || 0) + (v.dislikes || 0) > 0) ? `${Math.round(((v.likes || 0) / ((v.likes || 0) + (v.dislikes || 0))) * 100)}% positive` : '100% positive'}
+            </div>
+          </div>
+
+          <div className="content-card" style={{ padding: '16px 18px', margin: 0 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Clock size={13} color="#6366F1" /> Retention & AVD
+            </div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>
+              {Math.floor((v.avg_view_duration || 0) / 60)}m {(v.avg_view_duration || 0) % 60}s
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              {v.duration_seconds > 0 ? `${Math.round(((v.avg_view_duration || 0) / v.duration_seconds) * 100)}% video retention` : 'Avg view duration'}
             </div>
           </div>
         </div>

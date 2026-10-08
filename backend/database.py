@@ -48,15 +48,35 @@ def init_db():
         category_override INTEGER DEFAULT 0,
         views INTEGER DEFAULT 0,
         likes INTEGER DEFAULT 0,
+        dislikes INTEGER DEFAULT 0,
+        new_viewers INTEGER DEFAULT 0,
+        returning_viewers INTEGER DEFAULT 0,
         comments INTEGER DEFAULT 0,
         impressions INTEGER DEFAULT 0,
         ctr REAL DEFAULT 0.0,
         avg_view_duration INTEGER DEFAULT 0,
         watch_time_hours REAL DEFAULT 0.0,
         subscribers_gained INTEGER DEFAULT 0,
+        privacy_status TEXT DEFAULT 'public',
         updated_at TEXT
     );
     """)
+
+    # Channel weekly metrics table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS channel_weekly_metrics (
+        week_date TEXT PRIMARY KEY,
+        likes INTEGER NOT NULL,
+        cumulative_likes INTEGER NOT NULL
+    );
+    """)
+
+    # Migrations for existing tables
+    cursor.execute("PRAGMA table_info(videos)")
+    v_cols = {r["name"] for r in cursor.fetchall()}
+    for col, ctype in [("dislikes", "INTEGER DEFAULT 0"), ("new_viewers", "INTEGER DEFAULT 0"), ("returning_viewers", "INTEGER DEFAULT 0"), ("privacy_status", "TEXT DEFAULT 'public'")]:
+        if col not in v_cols:
+            cursor.execute(f"ALTER TABLE videos ADD COLUMN {col} {ctype}")
 
     # Monthly metrics table (for pivot leaderboard & YoY comparisons)
     cursor.execute("""
