@@ -37,7 +37,7 @@ import {
   Radio,
   Activity
 } from 'lucide-react';
-import { getLocalPlannedVideos, mergePlannedVideos, removeLocalPlannedVideo } from '../utils/plannerStorage';
+import { getLocalPlannedVideos, mergePlannedVideos, removeLocalPlannedVideo, saveLocalPlannedVideo } from '../utils/plannerStorage';
 
 function formatCompactNum(num) {
   if (!num || isNaN(num)) return '0';
@@ -186,6 +186,7 @@ export default function RightSidebarDock({
       onSelectItem({ ...selectedItem, is_urgent: newUrgentVal });
     }
 
+    saveLocalPlannedVideo({ ...video, is_urgent: newUrgentVal });
     try {
       await fetch(`/api/planner/videos/${video.id}`, {
         method: 'PUT',

@@ -1531,6 +1531,8 @@ def sync_client_planned_videos(payload: Dict[str, Any]):
         lu_status = lu.get("status") or ("Uploaded" if linked_vid else "Planned")
         lu_stage = lu.get("production_stage") or ("Uploaded" if linked_vid else "Idea")
         lu_updated = lu.get("updated_at") or now_str
+        if "is_urgent" in lu:
+            cursor.execute("UPDATE planned_videos SET is_urgent = ? WHERE id = ?", (1 if lu.get("is_urgent") else 0, lu_id))
         # Ensure the linked video has at least a stub record in videos table to avoid FK issues
         if linked_vid:
             cursor.execute("SELECT id FROM videos WHERE id = ?", (linked_vid,))

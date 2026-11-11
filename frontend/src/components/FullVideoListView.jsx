@@ -5,7 +5,7 @@ import {
   UploadCloud, ArrowUpDown, Layers, Zap, Clock, AlertCircle, RefreshCw,
   Video, CheckCircle2, TrendingUp, BarChart2, Flame
 } from 'lucide-react';
-import { removeLocalPlannedVideo } from '../utils/plannerStorage';
+import { removeLocalPlannedVideo, saveLocalPlannedVideo } from '../utils/plannerStorage';
 
 // Subject Abbreviations Dictionary (Fix 2: CFA & FRM Short Form Standard)
 const SUBJECT_ABBR_MAP = {
@@ -953,6 +953,7 @@ export default function FullVideoListView({
                           onClick={async (e) => {
                             e.stopPropagation();
                             const newUrgent = pv.is_urgent ? 0 : 1;
+                            saveLocalPlannedVideo({ ...pv, is_urgent: newUrgent });
                             try {
                               await fetch(`/api/planner/videos/${pv.id}`, {
                                 method: 'PUT',

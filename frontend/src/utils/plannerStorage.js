@@ -153,7 +153,8 @@ export async function syncLocalVideosToServer(serverVideos = []) {
     // Only re-sync if local is newer AND has meaningful link/status changes
     return localTime > serverTime && (
       v.linked_video_id !== serverItem.linked_video_id ||
-      v.status !== serverItem.status
+      v.status !== serverItem.status ||
+      Boolean(v.is_urgent) !== Boolean(serverItem.is_urgent)
     );
   });
 
@@ -173,6 +174,7 @@ export async function syncLocalVideosToServer(serverVideos = []) {
           linked_video_id: v.linked_video_id || null,
           status: v.status,
           production_stage: v.production_stage,
+          is_urgent: v.is_urgent ? 1 : 0,
           updated_at: v.updated_at
         }))
       })
