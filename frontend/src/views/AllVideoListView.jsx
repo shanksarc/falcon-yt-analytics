@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, Film, CheckCircle2, AlertCircle, ExternalLink, 
   Edit3, Unlink, Plus, Filter, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, BookOpen, Layers,
-  Eye, Clock, ThumbsUp, ThumbsDown, Users, Percent, Flame, Video, Globe, Lock, BarChart2, Calendar
+  Eye, Clock, ThumbsUp, ThumbsDown, Users, Percent, Flame, Video, Globe, Lock, BarChart2, Calendar, SlidersHorizontal
 } from 'lucide-react';
 
 // Helper to extract 4-digit publish year
